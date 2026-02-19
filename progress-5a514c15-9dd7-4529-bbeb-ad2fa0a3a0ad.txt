@@ -17,3 +17,17 @@ Started: 2026-02-19 16:37 UTC
 - Ran layout tests via `node test-header.js` and E2E tests via `node test-e2e.js`
 - **Learnings:** Layout styles are directly in `index.html`, making them easy to modify but requiring careful parsing in tests.
 ---
+## 2026-02-19 16:56 UTC - US-002: Clean up body padding to match compact header
+- Reduced body padding from 40px to 20px in public/index.html to match the more compact header layout.
+- Verified that box-sizing: border-box is used on the body selector to ensure the grid layout remains stable with padding.
+- Created test-body-padding.js to verify body styles.
+- Ran tests: node test-body-padding.js, node test-header.js, and node test-e2e.js.
+- Learnings: Using box-sizing: border-box is critical when using height: 100vh and padding on the body to avoid vertical scrollbars.
+---
+## 2026-02-19 17:25 UTC - US-002: Clean up body padding to match compact header
+- Further reduced body padding from 20px to 10px 20px (top/bottom, left/right) to further optimize space for the compact header.
+- Updated test-body-padding.js to verify the new padding values.
+- Verified that box-sizing: border-box remains applied.
+- All tests (body-padding, header, e2e) passed.
+- **Learnings:** Explicitly setting vertical and horizontal padding separately helps fine-tune the layout balance when the header height changes significantly.
+---
