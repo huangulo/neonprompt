@@ -7,6 +7,8 @@ Started: 2026-02-19 04:07 UTC
 - Simple Express server in `server.js`
 - Uses `better-sqlite3` for data persistence
 - Serves static files from `public/`
+- All routes (frontend and API) are protected via basic authentication.
+- Tests use `node:test` and can be run with `node --test test-auth.js`.
 
 ---
 ## 2026-02-19 04:10 UTC - US-001: Install express-basic-auth and verify package.json
@@ -19,4 +21,12 @@ Started: 2026-02-19 04:07 UTC
 - Applied middleware before static files and API routes to ensure full coverage
 - Verified protection of both frontend (`/`) and API (`/api/*`)
 - **Learnings:** Placing `basicAuth` before `express.static` and API routes ensures all endpoints are protected by default.
+---
+---
+## 2026-02-19 05:15 UTC - US-003: Verify end-to-round dashboard functionality with authentication
+- Verified server restarts and listens on port 3335
+- Verified 401 Unauthorized for unauthenticated requests
+- Verified 200 OK and dashboard load for authenticated requests (admin:password123)
+- Implemented `test-auth.js` using `node:test` to verify full CRUD cycle under authentication
+- **Learnings:** Basic auth successfully protects both static files and API routes; the `node:test` runner is efficient for API integration testing.
 ---
