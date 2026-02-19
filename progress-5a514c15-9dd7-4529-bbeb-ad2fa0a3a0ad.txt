@@ -31,3 +31,9 @@ Started: 2026-02-19 16:37 UTC
 - All tests (body-padding, header, e2e) passed.
 - **Learnings:** Explicitly setting vertical and horizontal padding separately helps fine-tune the layout balance when the header height changes significantly.
 ---
+## 2026-02-19 17:35 UTC - US-002: Clean up body padding to match compact header
+- Reduced body padding from 10px 20px to 8px 16px in public/index.html to better match the compact header.
+- Updated test-body-padding.js to reflect the new padding.
+- All tests passed.
+- **Learnings:** Incremental adjustments to body padding help maintain the visual balance as header elements become more compact.
+---
