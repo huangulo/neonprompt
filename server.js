@@ -2,6 +2,7 @@ const express = require('express');
 const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const basicAuth = require('express-basic-auth');
 
 const app = express();
 const port = 3335;
@@ -13,6 +14,14 @@ db.pragma('foreign_keys = ON');
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+
+// Basic Auth Middleware
+app.use(basicAuth({
+  users: { 'admin': 'password123' },
+  challenge: true,
+  realm: 'ProjectDashboard'
+}));
+
 app.use(express.static('public'));
 
 // Init DB

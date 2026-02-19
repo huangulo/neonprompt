@@ -14,3 +14,9 @@ Started: 2026-02-19 04:07 UTC
 - Verified `package.json` updates and `node_modules` installation
 - **Learnings:** Dependency installation is straightforward; no TypeScript found so typecheck is just verification of JS execution/syntax if needed.
 ---
+## 2026-02-19 05:07 UTC - US-002: Implement basic auth middleware for all routes
+- Configured `express-basic-auth` in `server.js` with `admin:password123`
+- Applied middleware before static files and API routes to ensure full coverage
+- Verified protection of both frontend (`/`) and API (`/api/*`)
+- **Learnings:** Placing `basicAuth` before `express.static` and API routes ensures all endpoints are protected by default.
+---
