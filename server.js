@@ -44,7 +44,7 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === 'admin' && password === 'password123') {
+  if (username === 'lechauve' && password === 'calvito911#') {
     req.session.authenticated = true;
     res.status(200).send('OK');
   } else {
