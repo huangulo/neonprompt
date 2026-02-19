@@ -18,9 +18,9 @@ async function testBodyPadding() {
 
     console.log('Checking body styles...');
     
-    // Check for padding: 10px 20px
-    if (!bodyStyle.match(/body\s*\{[^}]*padding:\s*10px 20px;?[^}]*\}/)) {
-        throw new Error('Body padding is not 10px 20px');
+    // Check for padding: 8px 16px
+    if (!bodyStyle.match(/body\s*\{[^}]*padding:\s*8px 16px;?[^}]*\}/)) {
+        throw new Error('Body padding is not 8px 16px');
     }
     
     // Check for box-sizing: border-box
