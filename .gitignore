@@ -1,12 +1,5 @@
 node_modules/
-dist/
-*.log
-*.db
 .env
-.env.*
+tasks.db
+*.log
 .DS_Store
-coverage/
-.nyc_output/
-*.key
-*.pem
-*.secret

@@ -1,19 +1,21 @@
-# Project Dashboard (TODO Tracker)
+# Project Dashboard
 
-A simple Node.js/Express dashboard to track project tasks, check them off, and add comments.
+A simple project management dashboard with task tracking.
 
 ## Features
-- **Projects:** List of active projects (e.g., Maderito, MediBot).
-- **Tasks:** Add/Edit/Delete tasks per project.
-- **Status:** Checkbox to mark complete.
-- **Comments:** Add notes to tasks.
-- **Storage:** SQLite (local file).
-
-## Tech Stack
-- **Backend:** Node.js + Express
-- **Database:** SQLite (via `better-sqlite3`)
-- **Frontend:** HTML/CSS/JS (Vanilla, served statically)
+- Create/Delete Projects
+- Add/Complete/Delete Tasks
+- Secure Login
 
 ## Setup
-1. `npm install`
-2. `npm start` (Runs on port 3335)
+
+1. Clone the repo
+2. `npm install`
+3. Copy `.env.example` to `.env` and configure credentials.
+4. Run `node server.js`
+5. Open `http://localhost:3335`
+
+## Tech Stack
+- Node.js + Express
+- SQLite (better-sqlite3)
+- Vanilla JS Frontend

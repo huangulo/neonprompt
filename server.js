@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
@@ -6,7 +7,7 @@ const session = require('express-session');
 const path = require('path');
 
 const app = express();
-const port = 3335;
+const port = process.env.PORT || 3335;
 const db = new Database('tasks.db');
 
 // Enable Foreign Keys for CASCADE DELETE
@@ -18,11 +19,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: 'dashboard-secret-key',
+  secret: process.env.SESSION_SECRET || 'dashboard-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
 }));
+
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'password';
 
 // Auth middleware
 const requireAuth = (req, res, next) => {
@@ -44,7 +48,7 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === 'lechauve' && password === 'calvito911#') {
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
     req.session.authenticated = true;
     res.status(200).send('OK');
   } else {
