@@ -3,29 +3,115 @@
 <head>
     <title>Project Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background-color: #f4f4f9; display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
-        .sidebar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .main { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; margin-top: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0;
+            padding: 40px; 
+            background-color: #1a1a1a; 
+            color: #e0e0e0;
+            display: grid; 
+            grid-template-columns: 280px 1fr; 
+            gap: 20px; 
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2a2a2a;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #4a9eff;
+            font-size: 1.5rem;
+        }
+        .logout-btn {
+            background-color: #444;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .logout-btn:hover {
+            background-color: #555;
+            border-color: #666;
+        }
+        .sidebar { 
+            background: #2a2a2a; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            overflow-y: auto;
+        }
+        .main { 
+            background: #2a2a2a; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            overflow-y: auto;
+        }
+        h2 { color: #4a9eff; margin-top: 0; }
         ul { list-style: none; padding: 0; }
-        li { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        li.active { background: #e8f5e9; font-weight: bold; }
-        li:hover { background-color: #f5f5f5; }
+        li { 
+            padding: 12px; 
+            border-bottom: 1px solid #3d3d3d; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            transition: background 0.2s;
+        }
+        li.active { background: #3d3d3d; border-left: 4px solid #4a9eff; }
+        li:hover { background-color: #353535; }
         li span { flex-grow: 1; }
-        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
-        .task-item.completed span { text-decoration: line-through; color: #888; }
-        input[type="checkbox"] { margin-right: 10px; transform: scale(1.2); }
-        .add-btn { background: #4CAF50; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
-        .del-btn { color: #ff5252; background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0 5px; opacity: 0.6; }
+        .task-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 12px; 
+            border-bottom: 1px solid #3d3d3d; 
+        }
+        .task-item.completed span { text-decoration: line-through; color: #777; }
+        input[type="checkbox"] { margin-right: 15px; transform: scale(1.2); cursor: pointer; }
+        .add-btn { background: #4a9eff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+        .add-btn:hover { background: #357abd; }
+        .del-btn { color: #ff5252; background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0 5px; opacity: 0.6; transition: opacity 0.2s; }
         .del-btn:hover { opacity: 1; transform: scale(1.1); }
-        input[type="text"] { padding: 8px; width: 60%; border: 1px solid #ddd; border-radius: 4px; }
+        input[type="text"] { 
+            padding: 10px; 
+            border: 1px solid #444; 
+            border-radius: 4px; 
+            background-color: #1a1a1a;
+            color: white;
+            box-sizing: border-box;
+        }
+        #current-project-title { color: #4a9eff; border-bottom: 1px solid #3d3d3d; padding-bottom: 10px; margin-top: 0; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>Project Dashboard</h1>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+
     <div class="sidebar">
         <h2>Projects</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="new-project" placeholder="New Project..." style="width: 60%">
+        <div style="margin-bottom: 15px; display: flex; gap: 5px;">
+            <input type="text" id="new-project" placeholder="New Project..." style="flex-grow: 1;">
             <button class="add-btn" onclick="addProject()">+</button>
         </div>
         <ul id="project-list"></ul>
@@ -44,10 +130,14 @@
 
     <script>
         let currentProjectId = null;
-        const API = '/api'; // Relative path since frontend is served by same server
+        const API = '/api';
 
         async function loadProjects() {
             const res = await fetch(`${API}/projects`);
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
             const projects = await res.json();
             const list = document.getElementById('project-list');
             list.innerHTML = projects.map(p => `
@@ -62,7 +152,7 @@
             currentProjectId = id;
             document.getElementById('current-project-title').innerText = name;
             document.getElementById('task-container').style.display = 'block';
-            loadProjects(); // Refresh active class
+            loadProjects(); 
             loadTasks();
         }
 
@@ -95,7 +185,7 @@
         }
 
         async function deleteProject(id, event) {
-            if (event) event.stopPropagation(); // Don't trigger selectProject
+            if (event) event.stopPropagation(); 
             if (!confirm('Are you sure you want to delete this project and ALL its tasks?')) return;
             
             await fetch(`${API}/projects/${id}`, { method: 'DELETE' });
@@ -138,12 +228,10 @@
             loadTasks();
         }
 
-        // Allow Enter key to submit new task
         document.getElementById('new-task').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') addTask();
         });
 
-        // Allow Enter key to submit new project
         document.getElementById('new-project').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') addProject();
         });

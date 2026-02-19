@@ -2,7 +2,8 @@ const express = require('express');
 const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const basicAuth = require('express-basic-auth');
+const session = require('express-session');
+const path = require('path');
 
 const app = express();
 const port = 3335;
@@ -14,15 +15,51 @@ db.pragma('foreign_keys = ON');
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Basic Auth Middleware
-app.use(basicAuth({
-  users: { 'admin': 'password123' },
-  challenge: true,
-  realm: 'ProjectDashboard'
+app.use(session({
+  secret: 'dashboard-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
 }));
 
-app.use(express.static('public'));
+// Auth middleware
+const requireAuth = (req, res, next) => {
+  if (req.session && req.session.authenticated) {
+    next();
+  } else {
+    if (req.path.startsWith('/api')) {
+      res.status(401).json({ error: 'Unauthorized' });
+    } else {
+      res.redirect('/login');
+    }
+  }
+};
+
+// Public Routes
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === 'admin' && password === 'password123') {
+    req.session.authenticated = true;
+    res.status(200).send('OK');
+  } else {
+    res.status(401).send('Invalid credentials');
+  }
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login');
+});
+
+// Protected Routes
+// Order matters: static first, THEN catch-all if needed, but static should handle /
+app.use(requireAuth, express.static('public'));
 
 // Init DB
 db.exec(`
