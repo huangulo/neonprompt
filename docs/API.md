@@ -14,7 +14,7 @@ Complete REST API documentation for the Project Dashboard.
 
 ### POST /auth/setup
 
-Create the initial admin user. Only works when no users exist.
+Create an initial admin user. Only works when no users exist.
 
 **Request:**
 ```json
@@ -153,7 +153,12 @@ curl http://localhost:3335/api/v1/projects/1 -H "X-API-Key: pd_..."
         "due_date": "2026-04-20T00:00:00.000Z",
         "created_at": "2026-04-12T15:00:00.000Z",
         "updated_at": "2026-04-12T15:00:00.000Z",
-        "completed_at": null
+        "completed_at": null,
+        "model_used": null,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "progress": 0,
+        "blocked_reason": null
       }
     ]
   }
@@ -300,6 +305,11 @@ curl "http://localhost:3335/api/v1/tasks/project/1?status=todo&priority=high" \
       "created_at": "2026-04-12T15:00:00.000Z",
       "updated_at": "2026-04-12T15:00:00.000Z",
       "completed_at": null,
+      "model_used": null,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "progress": 0,
+      "blocked_reason": null,
       "project_name": "Website Redesign"
     }
   ]
@@ -335,6 +345,11 @@ curl http://localhost:3335/api/v1/tasks/1 -H "X-API-Key: pd_..."
     "created_at": "2026-04-12T15:00:00.000Z",
     "updated_at": "2026-04-12T15:00:00.000Z",
     "completed_at": null,
+    "model_used": null,
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "progress": 0,
+    "blocked_reason": null,
     "project_name": "Website Redesign"
   }
 }
@@ -354,7 +369,11 @@ Create a task in a project.
   "priority": "high",
   "assigned_to": "ally",
   "due_date": "2026-04-20T00:00:00.000Z",
-  "status": "todo"
+  "status": "todo",
+  "model_used": "glm-4.7",
+  "tokens_in": 1500,
+  "tokens_out": 500,
+  "progress": 0
 }
 ```
 
@@ -373,12 +392,24 @@ Create a task in a project.
     "due_date": "2026-04-20T00:00:00.000Z",
     "created_at": "2026-04-12T15:00:00.000Z",
     "updated_at": "2026-04-12T15:00:00.000Z",
-    "completed_at": null
+    "completed_at": null,
+    "model_used": "glm-4.7",
+    "tokens_in": 1500,
+    "tokens_out": 500,
+    "progress": 0,
+    "blocked_reason": null
   }
 }
 ```
 
-**Defaults:** If not provided, `status` defaults to `todo` and `priority` defaults to `medium`.
+**Defaults:** If not provided, `status` defaults to `todo`, `priority` defaults to `medium`, and agent telemetry fields default to `0` or `null`.
+
+**New Fields:**
+- `model_used` (string, optional) — AI model used (e.g., "glm-4.7")
+- `tokens_in` (integer, optional) — Input tokens consumed
+- `tokens_out` (integer, optional) — Output tokens consumed
+- `progress` (integer, optional) — Task progress percentage (0-100)
+- `blocked_reason` (string, optional) — Reason why task is blocked (required when status=blocked)
 
 ---
 
@@ -386,12 +417,29 @@ Create a task in a project.
 
 Update a task.
 
-**Allowed fields:** `title`, `description`, `priority`, `assigned_to`, `due_date`, `status`
+**Allowed fields:** `title`, `description`, `priority`, `assigned_to`, `due_date`, `status`, `model_used`, `tokens_in`, `tokens_out`, `progress`, `blocked_reason`
 
-**Request:**
+**Request (basic status update):**
 ```json
 {
   "status": "done"
+}
+```
+
+**Request (with telemetry):**
+```json
+{
+  "progress": 75,
+  "tokens_in": 4500,
+  "tokens_out": 2100
+}
+```
+
+**Request (blocked status):**
+```json
+{
+  "status": "blocked",
+  "blocked_reason": "Waiting for API key"
 }
 ```
 
@@ -410,12 +458,21 @@ Update a task.
     "due_date": "2026-04-20T00:00:00.000Z",
     "created_at": "2026-04-12T15:00:00.000Z",
     "updated_at": "2026-04-12T16:00:00.000Z",
-    "completed_at": "2026-04-12T16:00:00.000Z"
+    "completed_at": "2026-04-12T16:00:00.000Z",
+    "model_used": "glm-4.7",
+    "tokens_in": 4500,
+    "tokens_out": 2100,
+    "progress": 75,
+    "blocked_reason": null
   }
 }
 ```
 
-**Note:** Setting `status` to `done` automatically sets `completed_at`. Changing status from `done` clears it.
+**Special Behavior:**
+- Setting `status` to `done` automatically sets `completed_at`. Changing status from `done` clears it.
+- Setting `progress` to `100` automatically sets `status` to `done` and `completed_at`.
+- Setting `status` to `blocked` requires `blocked_reason` to be provided.
+- Changing status from `blocked` to anything else automatically clears `blocked_reason`.
 
 ---
 
@@ -437,6 +494,91 @@ curl -X DELETE http://localhost:3335/api/v1/tasks/1 -H "X-API-Key: pd_..."
   }
 }
 ```
+
+---
+
+## Agent Telemetry
+
+### POST /heartbeat
+
+Update agent heartbeat and report status.
+
+**Authentication:** API key required (agents only)
+
+**Request:**
+```bash
+curl -H "X-API-Key: pd_..." -X POST -H "Content-Type: application/json" \
+ -d '{"status":"working","model_used":"glm-4.7"}' \
+ http://localhost:3335/api/v1/heartbeat
+```
+
+**Request Body:**
+```json
+{
+  "status": "working",
+  "current_task_id": 123,
+  "model_used": "glm-4.7"
+}
+```
+
+**Fields:**
+- `status` (required) — Agent status: `idle`, `working`, or `error`
+- `current_task_id` (optional) — ID of the task currently being worked on
+- `model_used` (optional) — AI model currently in use
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "agent": "test-agent",
+    "status": "working",
+    "last_seen_at": "2026-04-12T17:05:07.000Z"
+  }
+}
+```
+
+**Behavior:** The heartbeat is upserted — if the agent exists, it's updated; if not, it's created. The `last_seen_at` timestamp is always updated to current time.
+
+---
+
+### GET /agents
+
+List all agents with their current status.
+
+**Authentication:** JWT or API key
+
+**Request:**
+```bash
+curl http://localhost:3335/api/v1/agents -H "X-API-Key: pd_..."
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "agent_label": "test-agent",
+      "status": "working",
+      "model_used": "glm-4.7",
+      "current_task_id": 15,
+      "current_task_title": "Design new homepage",
+      "last_seen_at": "2026-04-12T17:05:07.000Z"
+    },
+    {
+      "agent_label": "ally-mcbeagle",
+      "status": "idle",
+      "model_used": null,
+      "current_task_id": null,
+      "current_task_title": null,
+      "last_seen_at": "2026-04-12T17:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Behavior:** Returns all agents sorted by `last_seen_at` (most recent first). If an agent has a `current_task_id`, the task title is included via JOIN.
 
 ---
 
@@ -469,7 +611,7 @@ curl "http://localhost:3335/api/v1/activity?limit=20&actor=ally" \
       "action": "create",
       "entity_type": "task",
       "entity_id": 1,
-      "details": "{\"title\":\"Design new homepage\",\"priority\":\"high\"}",
+      "details": "{\"title\":\"Design new homepage\",\"priority\":\"high\",\"model_used\":\"glm-4.7\"}",
       "created_at": "2026-04-12T15:00:00.000Z",
       "entity_name": "Design new homepage"
     }
@@ -672,6 +814,19 @@ async function createTask(projectId, title) {
   });
   return res.json();
 }
+
+// Send heartbeat
+async function sendHeartbeat(status) {
+  const res = await fetch(`${API_BASE}/heartbeat`, {
+    method: 'POST',
+    headers: {
+      'X-API-Key': API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  });
+  return res.json();
+}
 ```
 
 ### Python (requests)
@@ -699,11 +854,25 @@ response = requests.post(
     json={'title': 'Design homepage', 'priority': 'high'}
 )
 task = response.json()
+
+# Send heartbeat
+response = requests.post(
+    f'{API_BASE}/heartbeat',
+    headers=headers,
+    json={'status': 'working', 'model_used': 'glm-4.7'}
+)
+heartbeat = response.json()
 ```
 
 ---
 
 ## Changelog
+
+### v1.1 (2026-04-12)
+- Added agent heartbeat monitoring
+- Added task progress tracking (0-100%)
+- Added model and token telemetry fields
+- Added blocked task tracking with reason
 
 ### v1.0 (2026-04-12)
 - Initial release

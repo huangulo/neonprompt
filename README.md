@@ -19,12 +19,16 @@ Tracking project state across humans and AI agents is painful. Different tools, 
 - 📜 **Activity Logging** — Complete audit trail of all actions
 - 💾 **SQLite Database** — Zero dependencies, portable, fast
 - 🐳 **Docker Ready** — Containerized deployment included
+- 🤖 **Agent Heartbeat** — Real-time agent status monitoring (idle/working/error)
+- 📈 **Progress Tracking** — Visual progress bars on tasks (0-100%)
+- 🧠 **Model & Token Telemetry** — Track which AI model performed work and token usage
+- ⛔ **Blocked Task Tracking** — Tasks can be marked blocked with a reason
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 
 ### Installation
@@ -104,9 +108,56 @@ curl http://localhost:3335/api/v1/activity?limit=10 \
   -H "X-API-Key: $DASHBOARD_API_KEY"
 ```
 
+## Agent Telemetry
+
+Agents can send heartbeats to report their status and track token usage across tasks.
+
+### Send Heartbeat
+
+Report agent status and current task:
+
+```bash
+# Send heartbeat
+curl -H "X-API-Key: YOUR_KEY" -X POST -H "Content-Type: application/json" \
+ -d '{"status":"working","model_used":"glm-4.7"}' \
+ http://localhost:3335/api/v1/heartbeat
+```
+
+**Status values:** `idle`, `working`, `error`
+
+### Track Model and Token Usage
+
+Create tasks with model and token information:
+
+```bash
+# Create task with model info
+curl -H "X-API-Key: YOUR_KEY" -X POST -H "Content-Type: application/json" \
+ -d '{"title":"Build auth module","priority":"high","model_used":"glm-4.7","tokens_in":1500,"tokens_out":500}' \
+ http://localhost:3335/api/v1/tasks/project/1
+```
+
+Update task progress and cumulative token usage:
+
+```bash
+# Update progress
+curl -H "X-API-Key: YOUR_KEY" -X PATCH -H "Content-Type: application/json" \
+ -d '{"progress":75,"tokens_in":4500,"tokens_out":2100}' \
+ http://localhost:3335/api/v1/tasks/1
+```
+
+**Auto-complete:** When progress reaches 100%, status is automatically set to `done` and `completed_at` is set.
+
+**Blocked tasks:** Set status to `blocked` and provide a reason:
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" -X PATCH -H "Content-Type: application/json" \
+ -d '{"status":"blocked","blocked_reason":"Waiting for API key"}' \
+ http://localhost:3335/api/v1/tasks/1
+```
+
 ## API Reference
 
-For the complete API documentation, see [docs/API.md](docs/API.md).
+For complete API documentation, see [docs/API.md](docs/API.md).
 
 ### Common Endpoints
 
@@ -180,6 +231,7 @@ The dashboard uses SQLite with the following tables:
 - `projects` — Project records
 - `tasks` — Task records with status, priority, assignments
 - `activity_log` — Audit trail of all actions
+- `agent_heartbeats` — Real-time agent status monitoring
 
 Database migrations are automatically applied on startup.
 
