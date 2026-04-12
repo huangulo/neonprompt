@@ -21,20 +21,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1/auth', authRoutes);
 
 // Mount v1 routes
+app.use('/api/v1/tasks', taskRoutes);
+app.use('/api/v1/activity', activityRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/activity', activityRoutes);
-
-// DEBUG: Print all mounted routes
-console.log('\n=== MOUNTED ROUTES ===');
-app._router.stack.forEach(r => {
-    if (r.route) {
-        const path = r.route.path;
-        const methods = Object.keys(r.route.methods).map(m => m.toUpperCase()).join(', ');
-        console.log(`${methods.padEnd(10)} ${path}`);
-    }
-});
-console.log('=====================\n');
 
 // Health endpoint (no auth required)
 app.get('/health', (req, res) => {

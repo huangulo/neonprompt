@@ -78,7 +78,7 @@
             const list = document.getElementById('project-list');
             list.innerHTML = projects.map(p => {
                 const safeName = p.name.replace(/'/g, "\\'");
-                return '<li class="' + (p.id === currentProjectId ? 'active' : '') + '"><span onclick="selectProject(' + p.id + ', \'" + safeName + '\\')">' + p.name.toUpperCase() + '</span><button class="del-btn" onclick="deleteProject(' + p.id + ', event)" title="Delete Project">×</button></li>';
+                return `<li class="${p.id === currentProjectId ? 'active' : ''}"><span onclick="selectProject(${p.id}, '${safeName}')">${p.name.toUpperCase()}</span><button class="del-btn" onclick="deleteProject(${p.id}, event)" title="Delete Project">×</button></li>`;
             }).join('');
         }
         function getPriorityClass(priority) {
