@@ -58,7 +58,7 @@
     </div>
     <script>
         if (!localStorage.getItem('token')) {
-            window.location.href = '/login';
+            window.location.href = '/login.html';
         }
         function authHeaders() {
             const token = localStorage.getItem('token');
@@ -76,7 +76,7 @@
                 const res = await fetch(url, options);
                 if (res.status === 401) {
                     localStorage.removeItem('token');
-                    window.location.href = '/login';
+                    window.location.href = '/login.html';
                     return null;
                 }
                 if (!res.ok) {
@@ -153,7 +153,7 @@
         function handleLogout(event) {
             event.preventDefault();
             localStorage.removeItem('token');
-            window.location.href = '/login';
+            window.location.href = '/login.html';
         }
         document.getElementById('new-task').addEventListener('keypress', function (e) { if (e.key === 'Enter') addTask(); });
         document.getElementById('new-project').addEventListener('keypress', function (e) { if (e.key === 'Enter') addProject(); });
