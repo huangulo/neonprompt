@@ -4,7 +4,6 @@ const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 
 const app = express();
@@ -15,20 +14,16 @@ const db = new Database('tasks.db');
 db.pragma('foreign_keys = ON');
 
 // Middleware
-app.use(cors({ origin: true, credentials: true }));
+app.use((req, res, next) => { console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`); next(); });
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Session with SQLite store
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dashboard-secret-key',
   resave: false,
   saveUninitialized: false,
-  store: new SQLiteStore({ db: 'sessions.db' }),
-  cookie: { 
-    maxAge: 24 * 60 * 60 * 1000,
-    secure: false
-  }
+  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
 }));
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
@@ -68,6 +63,7 @@ app.get('/logout', (req, res) => {
 });
 
 // Protected Routes
+// Order matters: static first, THEN catch-all if needed, but static should handle /
 app.use(requireAuth, express.static('public'));
 
 // Init DB

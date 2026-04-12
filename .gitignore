@@ -3,3 +3,8 @@ node_modules/
 tasks.db
 *.log
 .DS_Store
+
+# Additional ignores
+progress-*.txt
+sessions.db
+data/
