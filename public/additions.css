@@ -295,3 +295,60 @@
         width: 100%;
     }
 }
+
+/* Output textarea for manual editing */
+.output-textarea {
+    width: 100%;
+    min-height: 100px;
+    background-color: #0d0d15;
+    border: 1px solid rgba(0, 255, 200, 0.2);
+    color: var(--text-primary);
+    padding: 12px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.output-textarea:focus {
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 10px rgba(123, 97, 255, 0.2);
+}
+
+/* Small button variant */
+.btn-small {
+    padding: 8px 16px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+
+.btn-save {
+    background-color: var(--accent-secondary);
+    color: var(--bg-primary);
+    border: 1px solid var(--accent-secondary);
+}
+
+.btn-save:hover {
+    background-color: #9550ff;
+    box-shadow: 0 0 15px rgba(123, 97, 255, 0.4);
+}
+
+/* Task item cursor */
+.task-item {
+    cursor: pointer;
+    user-select: none;
+}
+
+.task-item.expanded .task-expanded {
+    display: block;
+}
+
+/* Prevent default button styling within task items */
+.task-header .btn,
+.task-expanded .btn {
+    font-size: inherit;
+    font-family: inherit;
+}

@@ -227,13 +227,16 @@
                     </div>
                 ` : '';
 
-                // Output section
-                const outputHtml = t.output ? `
+                // Output section with textarea for editing
+                const outputHtml = `
                     <div class="output-section">
                         <div class="section-header">OUTPUT</div>
-                        <div class="code-block" style="border-color: #7b61ff;">${escapeHtml(t.output)}</div>
+                        <div class="code-block" style="border-color: #7b61ff;">
+                            <textarea id="output-${t.id}" class="output-textarea" placeholder="${t.output ? '' : 'Awaiting output...'}">${t.output ? escapeHtml(t.output) : ''}</textarea>
+                        </div>
+                        <button class="btn btn-small btn-save" onclick="saveOutput(${t.id})">SAVE OUTPUT</button>
                     </div>
-                ` : '';
+                `;
 
                 // Blocked reason
                 const blockedHtml = t.status === 'blocked' && t.blocked_reason ? `
@@ -241,9 +244,9 @@
                 ` : '';
 
                 return `
-                    <div class="task-item ${statusClass}" data-task-id="${t.id}">
+                    <div class="task-item ${statusClass}" data-task-id="${t.id}" onclick="toggleTaskExpand(${t.id}, event)">
                         <div class="task-header">
-                            <button class="status-dropdown-btn" onclick="toggleTaskDropdown(${t.id})">
+                            <button class="status-dropdown-btn" onclick="toggleTaskDropdown(${t.id}, event)">
                                 <span class="status-badge ${statusClass}" style="background: ${statusColor}; border: none;">${statusLabel}</span>
                             </button>
                             <div class="status-dropdown" id="dropdown-${t.id}" style="display: none;">
@@ -255,7 +258,7 @@
                                 <div class="status-option ${t.status === 'needs_revision' ? 'selected' : ''}" data-status="needs_revision" style="color: #ff9f1c;">NEEDS REVISION</div>
                             </div>
                             <div class="task-actions">
-                                <button class="del-btn" onclick="deleteTask(${t.id})" title="Delete Task">×</button>
+                                <button class="del-btn" onclick="deleteTask(${t.id}, event)" title="Delete Task">×</button>
                             </div>
                         </div>
                         <div class="task-title-row">
@@ -311,13 +314,15 @@
             loadTasks();
         }
 
-        async function deleteTask(id) {
+        async function deleteTask(id, event) {
+            if (event) event.stopPropagation();
             if (!confirm('Delete task?')) return;
             await fetchSafe(API + '/tasks/' + id, { method: 'DELETE' });
             loadTasks();
         }
 
-        async function toggleTaskDropdown(id) {
+        async function toggleTaskDropdown(id, event) {
+            if (event) event.stopPropagation();
             const dropdown = document.getElementById('dropdown-' + id);
             const allDropdowns = document.querySelectorAll('.status-dropdown');
             allDropdowns.forEach(d => {
@@ -331,6 +336,31 @@
                 method: 'PATCH',
                 body: JSON.stringify({ status })
             });
+            loadTasks();
+        }
+
+        function toggleTaskExpand(id, event) {
+            const taskItem = document.querySelector(`.task-item[data-task-id="${id}"]`);
+            const allTasks = document.querySelectorAll('.task-item');
+            
+            // Toggle expansion
+            taskItem.classList.toggle('expanded');
+        }
+
+        async function saveOutput(id) {
+            const outputTextarea = document.getElementById(`output-${id}`);
+            const output = outputTextarea.value.trim();
+            
+            if (!output) {
+                alert('Please enter output before saving');
+                return;
+            }
+            
+            await fetchSafe(API + '/tasks/' + id, {
+                method: 'PATCH',
+                body: JSON.stringify({ output })
+            });
+            
             loadTasks();
         }
 
@@ -379,8 +409,19 @@
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.status-dropdown-btn')) {
+            if (!e.target.closest('.status-dropdown-btn') && !e.target.closest('.status-dropdown')) {
                 document.querySelectorAll('.status-dropdown').forEach(d => d.style.display = 'none');
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('status-option')) {
+                const statusOption = e.target;
+                const status = statusOption.dataset.status;
+                const taskId = parseInt(statusOption.closest('.status-dropdown').id.replace('dropdown-', ''));
+                
+                e.stopPropagation();
+                changeTaskStatus(taskId, status);
             }
         });
 
