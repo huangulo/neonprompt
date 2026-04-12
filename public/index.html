@@ -68,7 +68,7 @@
             };
         }
         let currentProjectId = null;
-        const API = '/api';
+        const API = '/api/v1';
         async function fetchSafe(url, options = {}) {
             options.credentials = "include";
             options.headers = { ...authHeaders(), ...(options.headers || {}) };
@@ -108,7 +108,7 @@
         }
         async function loadTasks() {
             if (!currentProjectId) return;
-            const tasks = await fetchSafe(API + '/tasks/' + currentProjectId);
+            const tasks = await fetchSafe(API + '/tasks/project/' + currentProjectId);
             if (!tasks) return;
             const list = document.getElementById('task-list');
             list.innerHTML = tasks.map(t => '<div class="task-item ' + (t.completed ? 'completed' : '') + '"><div><input type="checkbox" ' + (t.completed ? 'checked' : '') + ' onchange="toggleTask(' + t.id + ', this.checked)"><span>' + t.title + '</span></div><button class="del-btn" onclick="deleteTask(' + t.id + ')" title="Delete Task">×</button></div>').join('');
@@ -136,7 +136,7 @@
             const input = document.getElementById('new-task');
             const title = input.value;
             if (!title || !currentProjectId) return;
-            await fetchSafe(API + '/tasks', { method: 'POST', body: JSON.stringify({ projectId: currentProjectId, title }) });
+            await fetchSafe(API + '/tasks/project/' + currentProjectId, { method: 'POST', body: JSON.stringify({ title }) });
             input.value = '';
             loadTasks();
             input.focus();
