@@ -130,11 +130,16 @@
         
         <form id="login-form">
             <div class="input-group">
-                <label>API Key</label>
-                <input type="text" id="api-key" placeholder="ENTER API KEY" autocomplete="off">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="ENTER USERNAME" autocomplete="off">
             </div>
             
-            <button type="submit" class="login-btn">CONNECT</button>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="ENTER PASSWORD" autocomplete="off">
+            </div>
+            
+            <button type="submit" class="login-btn">LOGIN</button>
         </form>
         
         <div class="error" id="error"></div>
@@ -142,26 +147,28 @@
     
     <script>
         const loginForm = document.getElementById('login-form');
-        const apiKeyInput = document.getElementById('api-key');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
         const errorDiv = document.getElementById('error');
         
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const apiKey = apiKeyInput.value.trim();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
             
-            if (!apiKey) {
-                showError('Please enter an API key');
+            if (!username || !password) {
+                showError('Please enter both username and password');
                 return;
             }
             
             try {
-                const response = await fetch('/api/v1/auth/login', {
+                const response = await fetch('/auth/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
                 });
                 
                 const result = await response.json();
@@ -170,7 +177,7 @@
                     localStorage.setItem('token', result.data.token);
                     window.location.href = '/';
                 } else {
-                    showError(result.error?.message || 'Invalid API key');
+                    showError(result.error?.message || 'Invalid username or password');
                 }
             } catch (err) {
                 showError('Connection error: ' + err.message);
@@ -182,8 +189,8 @@
             errorDiv.style.display = 'block';
         }
         
-        // Focus on API key input on load
-        apiKeyInput.focus();
+        // Focus on username input on load
+        usernameInput.focus();
     </script>
 </body>
 </html>
