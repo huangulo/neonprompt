@@ -53,7 +53,9 @@ console.log('=====================\n');
 app.get('/health', (req, res) => {
   const uptime = process.uptime();
   res.json({
+    name: 'NeonPrompt',
     status: 'ok',
+    version: '3.0.0',
     uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
     timestamp: new Date().toISOString()
   });
@@ -64,5 +66,5 @@ app.use(express.static('public'));
 
 // Start Server
 server.listen(port, '0.0.0.0', () => {
-  console.log(`✅ Project Dashboard running at http://0.0.0.0:${port}`);
+  console.log(`✅ NeonPrompt running at http://0.0.0.0:${port}`);
 });

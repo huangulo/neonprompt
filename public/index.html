@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Dashboard</title>
+    <title>NeonPrompt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>PROJECT DASHBOARD</h1>
+        <h1>NEONPROMPT</h1>
         <div class="header-actions">
             <div id="agent-status-bar" class="agent-status-bar"></div>
             <a href="/login.html" class="logout-btn" onclick="handleLogout(event)">LOGOUT</a>
@@ -28,10 +28,29 @@
         <div class="main">
             <h2 id="current-project-title" style="border-bottom: 1px solid rgba(0, 255, 200, 0.2); padding-bottom: 20px; margin-bottom: 25px; font-size: 28px; letter-spacing: 2px;">SELECT A PROJECT</h2>
             <div id="task-container" style="display: none;">
-                <div style="margin-bottom: 30px; display: flex; gap: 12px; flex-direction: column;">
-                    <input type="text" id="new-task" placeholder="ADD A NEW TASK..." style="flex-grow: 1; padding: 14px; font-family: 'Orbitron', sans-serif; letter-spacing: 1px; font-size: 12px; text-transform: uppercase;">
-                    <button class="add-btn" onclick="addTask()">ADD TASK</button>
+                <div id="add-task-form" class="add-task-form" style="display: none;">
+                    <h3 style="margin-bottom: 20px; color: #7b61ff; letter-spacing: 2px; font-size: 14px;">+ NEW TASK</h3>
+                    <div class="form-row">
+                        <input type="text" id="task-title" placeholder="TITLE *" required style="flex-grow: 1;">
+                    </div>
+                    <div class="form-row">
+                        <textarea id="task-prompt" placeholder="PROMPT (optional)" rows="4"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <select id="task-priority">
+                            <option value="low">LOW</option>
+                            <option value="medium" selected>MEDIUM</option>
+                            <option value="high">HIGH</option>
+                            <option value="urgent">URGENT</option>
+                        </select>
+                        <input type="text" id="task-assigned" placeholder="ASSIGNED TO (optional)">
+                    </div>
+                    <div class="form-row form-actions">
+                        <button class="btn btn-cancel" onclick="closeAddTaskForm()">CANCEL</button>
+                        <button class="btn btn-primary" onclick="createTask()">CREATE</button>
+                    </div>
                 </div>
+                <button class="add-task-btn" onclick="toggleAddTaskForm()">+ NEW TASK</button>
                 <div id="task-list"></div>
             </div>
         </div>
@@ -50,7 +69,6 @@
         let currentProjectId = null;
         const API = '/api/v1';
 
-        // Fetch agents on page load and every 30 seconds
         let agentInterval = null;
         async function loadAgents() {
             try {
@@ -79,7 +97,6 @@
             }
         }
 
-        // Start agent polling on page load
         loadAgents();
         agentInterval = setInterval(loadAgents, 30000);
 
@@ -130,19 +147,23 @@
             return (priority || 'medium').substring(0, 3).toUpperCase();
         }
 
-        function getTaskStatusClass(task) {
-            if (task.status === 'done') return 'completed';
-            if (task.status === 'blocked') return 'blocked';
-            if (task.status === 'in_progress') return 'in-progress';
+        function getTaskStatusClass(status) {
+            if (status === 'done') return 'completed';
+            if (status === 'blocked') return 'blocked';
+            if (status === 'in_progress') return 'in-progress';
+            if (status === 'drafted') return 'drafted';
+            if (status === 'needs_revision') return 'needs-revision';
             return '';
         }
 
-        function getStatusClass(status) {
-            if (status === 'todo') return 'status-todo';
-            if (status === 'in_progress') return 'status-in-progress';
-            if (status === 'done') return 'status-done';
-            if (status === 'blocked') return 'status-blocked';
-            return '';
+        function getStatusColor(status) {
+            if (status === 'drafted') return '#7b61ff';
+            if (status === 'todo') return '#6b7280';
+            if (status === 'in_progress') return '#00ffc8';
+            if (status === 'done') return '#00ffc8';
+            if (status === 'blocked') return '#ff3366';
+            if (status === 'needs_revision') return '#ff9f1c';
+            return '#6b7280';
         }
 
         function getStatusLabel(status) {
@@ -150,6 +171,8 @@
             if (status === 'in_progress') return 'IN PROGRESS';
             if (status === 'done') return 'DONE';
             if (status === 'blocked') return 'BLOCKED';
+            if (status === 'drafted') return 'DRAFTED';
+            if (status === 'needs_revision') return 'NEEDS REVISION';
             return status ? status.toUpperCase() : '';
         }
 
@@ -163,6 +186,7 @@
             currentProjectId = id;
             document.getElementById('current-project-title').innerText = name.toUpperCase();
             document.getElementById('task-container').style.display = 'block';
+            closeAddTaskForm();
             loadProjects();
             loadTasks();
         }
@@ -173,11 +197,11 @@
             if (!tasks) return;
             const list = document.getElementById('task-list');
             list.innerHTML = tasks.map(t => {
-                const statusClass = getTaskStatusClass(t);
+                const statusClass = getTaskStatusClass(t.status);
+                const statusColor = getStatusColor(t.status);
+                const statusLabel = getStatusLabel(t.status);
                 const priorityClass = getPriorityClass(t.priority);
                 const priorityLabel = getPriorityLabel(t.priority);
-                const statusLabel = getStatusLabel(t.status);
-                const statusBadge = `<span class="status-badge ${getStatusClass(t.status)}">${statusLabel}</span>`;
                 const assignedHtml = t.assigned_to ? '<span class="assigned-to">@' + t.assigned_to + '</span>' : '';
 
                 // Progress bar
@@ -195,65 +219,95 @@
                     </div>
                 ` : '';
 
+                // Prompt section
+                const promptHtml = t.prompt ? `
+                    <div class="prompt-section">
+                        <div class="section-header">PROMPT</div>
+                        <div class="code-block">${escapeHtml(t.prompt)}</div>
+                    </div>
+                ` : '';
+
+                // Output section
+                const outputHtml = t.output ? `
+                    <div class="output-section">
+                        <div class="section-header">OUTPUT</div>
+                        <div class="code-block" style="border-color: #7b61ff;">${escapeHtml(t.output)}</div>
+                    </div>
+                ` : '';
+
                 // Blocked reason
                 const blockedHtml = t.status === 'blocked' && t.blocked_reason ? `
                     <div class="blocked-reason">⛔ ${t.blocked_reason}</div>
                 ` : '';
 
                 return `
-                    <div class="task-item ${statusClass}">
-                        <div class="task-content">
-                            <input type="checkbox" ${statusClass === 'completed' ? 'checked' : ''} onchange="toggleTask(${t.id}, ${statusClass === 'completed' ? 'false' : 'true'})">
+                    <div class="task-item ${statusClass}" data-task-id="${t.id}">
+                        <div class="task-header">
+                            <button class="status-dropdown-btn" onclick="toggleTaskDropdown(${t.id})">
+                                <span class="status-badge ${statusClass}" style="background: ${statusColor}; border: none;">${statusLabel}</span>
+                            </button>
+                            <div class="status-dropdown" id="dropdown-${t.id}" style="display: none;">
+                                <div class="status-option ${t.status === 'drafted' ? 'selected' : ''}" data-status="drafted" style="color: #7b61ff;">DRAFTED</div>
+                                <div class="status-option ${t.status === 'todo' ? 'selected' : ''}" data-status="todo" style="color: #6b7280;">TODO</div>
+                                <div class="status-option ${t.status === 'in_progress' ? 'selected' : ''}" data-status="in_progress" style="color: #00ffc8;">IN PROGRESS</div>
+                                <div class="status-option ${t.status === 'done' ? 'selected' : ''}" data-status="done" style="color: #00ffc8;">DONE</div>
+                                <div class="status-option ${t.status === 'blocked' ? 'selected' : ''}" data-status="blocked" style="color: #ff3366;">BLOCKED</div>
+                                <div class="status-option ${t.status === 'needs_revision' ? 'selected' : ''}" data-status="needs_revision" style="color: #ff9f1c;">NEEDS REVISION</div>
+                            </div>
+                            <div class="task-actions">
+                                <button class="del-btn" onclick="deleteTask(${t.id})" title="Delete Task">×</button>
+                            </div>
+                        </div>
+                        <div class="task-title-row">
                             <span class="priority-badge ${priorityClass}">${priorityLabel}</span>
-                            ${statusBadge}
                             <span>${t.title}</span>
                             ${assignedHtml}
                         </div>
-                        <div class="task-details">
+                        <div class="task-expanded">
+                            ${promptHtml}
+                            ${outputHtml}
                             ${progressHtml}
                             ${modelInfoHtml}
                             ${blockedHtml}
                         </div>
-                        <button class="del-btn" onclick="deleteTask(${t.id})" title="Delete Task">×</button>
                     </div>
                 `;
             }).join('');
         }
 
-        async function addProject() {
-            const input = document.getElementById('new-project');
-            const name = input.value;
-            if (!name) return;
-            await fetchSafe(API + '/projects', { method: 'POST', body: JSON.stringify({ name }) });
-            input.value = '';
-            loadProjects();
-        }
+        async function createTask() {
+            const titleInput = document.getElementById('task-title');
+            const promptInput = document.getElementById('task-prompt');
+            const priorityInput = document.getElementById('task-priority');
+            const assignedInput = document.getElementById('task-assigned');
 
-        async function deleteProject(id, event) {
-            if (event) event.stopPropagation();
-            if (!confirm('Delete project and all tasks?')) return;
-            await fetchSafe(API + '/projects/' + id, { method: 'DELETE' });
-            if (currentProjectId === id) {
-                currentProjectId = null;
-                document.getElementById('current-project-title').innerText = 'SELECT A PROJECT';
-                document.getElementById('task-container').style.display = 'none';
+            const title = titleInput.value.trim();
+            const prompt = promptInput.value.trim();
+            const assigned = assignedInput.value.trim();
+            const priority = priorityInput.value;
+
+            if (!title) {
+                alert('Title is required');
+                return;
             }
-            loadProjects();
-        }
 
-        async function addTask() {
-            const input = document.getElementById('new-task');
-            const title = input.value;
-            if (!title || !currentProjectId) return;
-            await fetchSafe(API + '/tasks/project/' + currentProjectId, { method: 'POST', body: JSON.stringify({ title }) });
-            input.value = '';
-            loadTasks();
-            input.focus();
-        }
+            const status = prompt ? 'drafted' : 'todo';
 
-        async function toggleTask(id, markAsDone) {
-            const status = markAsDone ? 'done' : 'todo';
-            await fetchSafe(API + '/tasks/' + id, { method: 'PATCH', body: JSON.stringify({ status }) });
+            await fetchSafe(API + '/tasks/project/' + currentProjectId, {
+                method: 'POST',
+                body: JSON.stringify({
+                    title,
+                    prompt,
+                    priority,
+                    assigned_to: assigned || null,
+                    status
+                })
+            });
+
+            closeAddTaskForm();
+            titleInput.value = '';
+            promptInput.value = '';
+            assignedInput.value = '';
             loadTasks();
         }
 
@@ -263,6 +317,40 @@
             loadTasks();
         }
 
+        async function toggleTaskDropdown(id) {
+            const dropdown = document.getElementById('dropdown-' + id);
+            const allDropdowns = document.querySelectorAll('.status-dropdown');
+            allDropdowns.forEach(d => {
+                if (d.id !== 'dropdown-' + id) d.style.display = 'none';
+            });
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function changeTaskStatus(id, status) {
+            await fetchSafe(API + '/tasks/' + id, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
+            loadTasks();
+        }
+
+        function toggleAddTaskForm() {
+            const form = document.getElementById('add-task-form');
+            const btn = document.querySelector('.add-task-btn');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            btn.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'block') {
+                document.getElementById('task-title').focus();
+            }
+        }
+
+        function closeAddTaskForm() {
+            const form = document.getElementById('add-task-form');
+            const btn = document.querySelector('.add-task-btn');
+            form.style.display = 'none';
+            btn.style.display = 'block';
+        }
+
         function handleLogout(event) {
             event.preventDefault();
             if (agentInterval) clearInterval(agentInterval);
@@ -270,10 +358,10 @@
             window.location.href = '/login.html';
         }
 
-        document.getElementById('new-task').addEventListener('keypress', function (e) { if (e.key === 'Enter') addTask(); });
+        document.getElementById('task-title').addEventListener('keypress', function (e) { if (e.key === 'Enter') createTask(); });
+
         document.getElementById('new-project').addEventListener('keypress', function (e) { if (e.key === 'Enter') addProject(); });
 
-        // Event delegation for project list
         document.getElementById('project-list').addEventListener('click', (e) => {
             const li = e.target.closest('li');
             if (!li) return;
@@ -281,16 +369,26 @@
             const projectId = li.dataset.projectId;
             const projectName = li.dataset.projectName;
 
-            // Check if delete button was clicked
             if (e.target.classList.contains('del-btn') || e.target.dataset.action === 'delete') {
                 e.stopPropagation();
                 deleteProject(projectId, e);
                 return;
             }
 
-            // Otherwise, select the project
             selectProject(projectId, projectName);
         });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.status-dropdown-btn')) {
+                document.querySelectorAll('.status-dropdown').forEach(d => d.style.display = 'none');
+            }
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         loadProjects();
     </script>

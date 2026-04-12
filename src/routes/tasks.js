@@ -110,12 +110,42 @@ router.get('/:id', authenticateAny, (req, res) => {
 });
 
 /**
+ * GET /:id/revisions — get task revision history from activity log
+ */
+router.get('/:id/revisions', authenticateAny, (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const revisions = db.prepare(`
+            SELECT *
+            FROM activity_log
+            WHERE entity_type = 'task' AND entity_id = ?
+            ORDER BY created_at DESC
+        `).all(id);
+
+        res.json({
+            success: true,
+            data: revisions
+        });
+    } catch (err) {
+        console.error('[TASKS] Revisions error:', err);
+        res.status(500).json({
+            success: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Failed to get task revisions'
+            }
+        });
+    }
+});
+
+/**
  * POST /project/:projectId — create task
  */
 router.post('/project/:projectId', authenticateAny, (req, res) => {
     try {
         const { projectId } = req.params;
-        const { title, description, priority, assigned_to, due_date, status, model_used, tokens_in, tokens_out, progress } = req.body;
+        const { title, description, priority, assigned_to, due_date, status, model_used, tokens_in, tokens_out, progress, prompt, output, parent_task_id } = req.body;
 
         if (!title) {
             return res.status(400).json({
@@ -132,20 +162,23 @@ router.post('/project/:projectId', authenticateAny, (req, res) => {
         const taskPriority = priority || 'medium';
 
         const result = db.prepare(`
-            INSERT INTO tasks (project_id, title, description, priority, assigned_to, due_date, status, model_used, tokens_in, tokens_out, progress)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (project_id, title, description, status, priority, assigned_to, due_date, model_used, tokens_in, tokens_out, progress, prompt, output, parent_task_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
             projectId,
             title,
             description || null,
+            taskStatus,
             taskPriority,
             assigned_to || null,
             due_date || null,
-            taskStatus,
             model_used || null,
             tokens_in || 0,
             tokens_out || 0,
-            progress || 0
+            progress || 0,
+            prompt || null,
+            output || null,
+            parent_task_id || null
         );
 
         const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
@@ -154,7 +187,8 @@ router.post('/project/:projectId', authenticateAny, (req, res) => {
         logActivity(db, req.actor.name, req.actor.type, 'create', 'task', result.lastInsertRowid, {
             title: task.title,
             priority: task.priority,
-            model_used: task.model_used
+            model_used: task.model_used,
+            status: task.status
         });
 
         res.status(201).json({
@@ -184,7 +218,8 @@ router.patch('/:id', authenticateAny, (req, res) => {
         // Allowed fields (expanded with new agent fields)
         const allowedFields = [
             'title', 'description', 'priority', 'assigned_to', 'due_date', 'status',
-            'model_used', 'tokens_in', 'tokens_out', 'progress', 'blocked_reason'
+            'model_used', 'tokens_in', 'tokens_out', 'progress', 'blocked_reason',
+            'prompt', 'output', 'parent_task_id'
         ];
         const updateFields = Object.keys(updates).filter(key => allowedFields.includes(key));
 
@@ -206,6 +241,18 @@ router.patch('/:id', authenticateAny, (req, res) => {
                 error: {
                     code: 'NOT_FOUND',
                     message: 'Task not found'
+                }
+            });
+        }
+
+        // Validate status
+        const validStatuses = ['drafted', 'todo', 'in_progress', 'done', 'blocked', 'needs_revision'];
+        if (updates.status && !validStatuses.includes(updates.status)) {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'INVALID_INPUT',
+                    message: 'Status must be one of: drafted, todo, in_progress, done, blocked, needs_revision'
                 }
             });
         }
@@ -233,6 +280,14 @@ router.patch('/:id', authenticateAny, (req, res) => {
             finalUpdates.status = 'done';
             if (!updateFields.includes('status')) {
                 updateFields.push('status');
+            }
+        }
+
+        // Auto-increment revision_count when output is updated
+        if (updates.output && updates.output !== currentTask.output) {
+            finalUpdates.revision_count = (currentTask.revision_count || 0) + 1;
+            if (!updateFields.includes('revision_count')) {
+                updateFields.push('revision_count');
             }
         }
 

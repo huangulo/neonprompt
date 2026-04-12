@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Project Dashboard</title>
+    <title>Login - NeonPrompt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -13,11 +13,12 @@
             --bg-surface: #12121a;
             --bg-surface-hover: #1a1a2e;
             --accent-primary: #00ffc8;
+            --accent-secondary: #7b61ff;
             --danger: #ff3366;
             --text-primary: #e0e0e0;
             --text-secondary: #6b7280;
         }
-        
+
         body {
             margin: 0;
             font-family: 'Inter', sans-serif;
@@ -27,12 +28,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(0, 255, 200, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 255, 200, 0.03) 1px, transparent 1px);
             background-size: 50px 50px;
         }
-        
+
         .login-card {
             background-color: var(--bg-surface);
             padding: 50px;
@@ -42,7 +43,7 @@
             width: 100%;
             max-width: 400px;
         }
-        
+
         .app-title {
             font-family: 'Orbitron', sans-serif;
             font-size: 32px;
@@ -52,7 +53,7 @@
             text-shadow: 0 0 20px rgba(0, 255, 200, 0.4);
             letter-spacing: 4px;
         }
-        
+
         .tagline {
             text-align: center;
             color: var(--text-secondary);
@@ -61,11 +62,11 @@
             letter-spacing: 2px;
             text-transform: uppercase;
         }
-        
+
         .input-group {
             margin-bottom: 25px;
         }
-        
+
         .input-group label {
             display: block;
             margin-bottom: 8px;
@@ -74,7 +75,7 @@
             letter-spacing: 1px;
             text-transform: uppercase;
         }
-        
+
         .input-group input {
             width: 100%;
             background-color: var(--bg-surface-hover);
@@ -87,12 +88,12 @@
             font-size: 14px;
             transition: all 0.3s ease;
         }
-        
+
         .input-group input:focus {
             border-color: var(--accent-primary);
             box-shadow: 0 0 15px rgba(0, 255, 200, 0.2);
         }
-        
+
         .login-btn {
             width: 100%;
             background-color: transparent;
@@ -107,13 +108,13 @@
             font-family: 'Orbitron', sans-serif;
             letter-spacing: 2px;
         }
-        
+
         .login-btn:hover {
             background-color: var(--accent-primary);
             color: var(--bg-primary);
             box-shadow: 0 0 20px rgba(0, 255, 200, 0.5);
         }
-        
+
         .error {
             color: var(--danger);
             text-align: center;
@@ -125,43 +126,43 @@
 </head>
 <body>
     <div class="login-card">
-        <h1 class="app-title">PROJECT DASHBOARD</h1>
-        <p class="tagline">Human + Agent Shared State</p>
-        
+        <h1 class="app-title">NEONPROMPT</h1>
+        <p class="tagline">Prompt Execution Tracker for Humans & Agents</p>
+
         <form id="login-form">
             <div class="input-group">
                 <label>Username</label>
                 <input type="text" id="username" placeholder="ENTER USERNAME" autocomplete="off">
             </div>
-            
+
             <div class="input-group">
                 <label>Password</label>
                 <input type="password" id="password" placeholder="ENTER PASSWORD" autocomplete="off">
             </div>
-            
+
             <button type="submit" class="login-btn">LOGIN</button>
         </form>
-        
+
         <div class="error" id="error"></div>
     </div>
-    
+
     <script>
         const loginForm = document.getElementById('login-form');
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
         const errorDiv = document.getElementById('error');
-        
+
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const username = usernameInput.value.trim();
             const password = passwordInput.value.trim();
-            
+
             if (!username || !password) {
                 showError('Please enter both username and password');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/v1/auth/login', {
                     method: 'POST',
@@ -170,9 +171,9 @@
                     },
                     body: JSON.stringify({ username, password })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success && result.data.token) {
                     localStorage.setItem('token', result.data.token);
                     window.location.href = '/';
@@ -183,13 +184,12 @@
                 showError('Connection error: ' + err.message);
             }
         });
-        
+
         function showError(message) {
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
         }
-        
-        // Focus on username input on load
+
         usernameInput.focus();
     </script>
 </body>
