@@ -19,7 +19,7 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background-image: 
+    background-image:
         linear-gradient(rgba(0, 255, 200, 0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0, 255, 200, 0.03) 1px, transparent 1px);
     background-size: 50px 50px;
@@ -44,6 +44,44 @@ body {
     color: var(--accent-primary);
     text-shadow: 0 0 15px rgba(0, 255, 200, 0.3);
     letter-spacing: 2px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Agent Status Bar */
+.agent-status-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.agent-status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.agent-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--status-color, #6b7280);
+}
+
+.agent-working-on {
+    color: var(--accent-primary);
+    font-weight: 500;
+    font-size: 10px;
 }
 
 .logout-btn {
@@ -189,8 +227,7 @@ input[type="text"]:focus {
 
 .task-item {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     padding: 16px 0;
     border-bottom: 1px solid rgba(0, 255, 200, 0.1);
 }
@@ -199,7 +236,7 @@ input[type="text"]:focus {
     border-bottom: none;
 }
 
-.task-item.completed span {
+.task-item.completed span.task-content > span:not(.priority-badge):not(.status-badge) {
     text-decoration: line-through;
     color: var(--text-secondary);
     opacity: 0.6;
@@ -209,6 +246,115 @@ input[type="text"]:focus {
     opacity: 0.6;
 }
 
+.task-item.in-progress span.task-content > span:not(.priority-badge):not(.status-badge) {
+    color: var(--accent-primary);
+    text-shadow: 0 0 10px rgba(0, 255, 200, 0.3);
+}
+
+.task-item.blocked span.task-content > span:not(.priority-badge):not(.status-badge) {
+    color: var(--danger);
+    text-shadow: 0 0 10px rgba(255, 51, 102, 0.3);
+}
+
+.task-item.status-todo span.task-content > span:not(.priority-badge):not(.status-badge) {
+    color: var(--text-secondary);
+}
+
+.task-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.task-details {
+    margin-top: 8px;
+    margin-left: 35px;
+}
+
+/* Progress Bar */
+.progress-container {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-secondary) 0%, var(--accent-primary) 100%);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px rgba(0, 255, 200, 0.3);
+}
+
+.progress-text {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Model Info */
+.model-info {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+}
+
+/* Blocked Reason */
+.blocked-reason {
+    font-size: 11px;
+    color: var(--danger);
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background-color: rgba(255, 51, 102, 0.08);
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    box-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+    font-weight: 500;
+}
+
+/* Status Badge */
+.status-badge {
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.status-todo {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: var(--text-secondary);
+    border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.status-in-progress {
+    background-color: rgba(0, 255, 200, 0.15);
+    color: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+    box-shadow: 0 0 8px rgba(0, 255, 200, 0.2);
+}
+
+.status-done {
+    background-color: rgba(0, 255, 200, 0.15);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.status-blocked {
+    background-color: rgba(255, 51, 102, 0.15);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    box-shadow: 0 0 8px rgba(255, 51, 102, 0.2);
+}
+
 input[type="checkbox"] {
     margin-right: 15px;
     transform: scale(1.2);
@@ -216,12 +362,6 @@ input[type="checkbox"] {
     accent-color: var(--accent-primary);
     width: 20px;
     height: 20px;
-}
-
-.task-content {
-    display: flex;
-    align-items: center;
-    flex: 1;
 }
 
 .priority-badge {

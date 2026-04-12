@@ -8,6 +8,7 @@ const keysRoutes = require('./src/routes/keys.js');
 const projectRoutes = require('./src/routes/projects.js');
 const taskRoutes = require('./src/routes/tasks.js');
 const activityRoutes = require('./src/routes/activity.js');
+const agentRoutes = require('./src/routes/agents.js');
 
 const app = express();
 const server = createServer(app);
@@ -24,6 +25,18 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/activity', activityRoutes);
+app.use('/api/v1/agents', agentRoutes);
+
+// Heartbeat endpoint - mount it so /api/v1/heartbeat works
+// The agentRoutes router has a /heartbeat route, so we need to mount it at /api/v1
+// But that would make /agents accessible at /api/v1/agents, which is what we want
+// Let's try a different approach - just duplicate the heartbeat route at top level
+app.post('/api/v1/heartbeat', (req, res, next) => {
+  // Forward the request to the agent's /heartbeat route
+  req.url = '/heartbeat';
+  req.baseUrl = '/api/v1/agents';
+  return agentRoutes(req, res, next);
+});
 
 // DEBUG: Print all mounted routes
 console.log('\n=== MOUNTED ROUTES ===');

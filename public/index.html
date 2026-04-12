@@ -12,7 +12,10 @@
 <body>
     <div class="header">
         <h1>PROJECT DASHBOARD</h1>
-        <a href="/login.html" class="logout-btn" onclick="handleLogout(event)">LOGOUT</a>
+        <div class="header-actions">
+            <div id="agent-status-bar" class="agent-status-bar"></div>
+            <a href="/login.html" class="logout-btn" onclick="handleLogout(event)">LOGOUT</a>
+        </div>
     </div>
     <div class="workspace">
         <div class="sidebar">
@@ -46,6 +49,40 @@
         }
         let currentProjectId = null;
         const API = '/api/v1';
+
+        // Fetch agents on page load and every 30 seconds
+        let agentInterval = null;
+        async function loadAgents() {
+            try {
+                const result = await fetchSafe(API + '/agents');
+                if (!result) return;
+                const agents = result;
+                const statusBar = document.getElementById('agent-status-bar');
+                if (agents.length === 0) {
+                    statusBar.innerHTML = '';
+                    return;
+                }
+                statusBar.innerHTML = agents.map(a => {
+                    const statusColor = a.status === 'working' ? '#00ffc8' : (a.status === 'error' ? '#ff3366' : '#6b7280');
+                    const statusGlow = a.status === 'working' ? 'box-shadow: 0 0 8px #00ffc8' : (a.status === 'error' ? 'box-shadow: 0 0 8px #ff3366' : '');
+                    const workingInfo = a.current_task_title ? `<span class="agent-working-on">${a.current_task_title}</span>` : '';
+                    return `
+                        <div class="agent-status-item" style="--status-color: ${statusColor}; ${statusGlow}">
+                            <span class="agent-dot"></span>
+                            <span class="agent-label">${a.agent_label}</span>
+                            ${workingInfo}
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Failed to load agents:', err);
+            }
+        }
+
+        // Start agent polling on page load
+        loadAgents();
+        agentInterval = setInterval(loadAgents, 30000);
+
         async function fetchSafe(url, options = {}) {
             options.credentials = "include";
             options.headers = { ...authHeaders(), ...(options.headers || {}) };
@@ -71,6 +108,7 @@
                 throw err;
             }
         }
+
         async function loadProjects() {
             const result = await fetchSafe(API + '/projects');
             if (!result) return;
@@ -81,17 +119,46 @@
                 return `<li class="${p.id === currentProjectId ? 'active' : ''}" data-project-id="${p.id}" data-project-name="${safeName}"><span>${p.name.toUpperCase()}</span><button class="del-btn" data-action="delete" title="Delete Project">×</button></li>`;
             }).join('');
         }
+
         function getPriorityClass(priority) {
             if (!priority) return 'priority-medium';
             return 'priority-' + (priority || 'medium').toLowerCase();
         }
+
         function getPriorityLabel(priority) {
             if (!priority) return 'MED';
             return (priority || 'medium').substring(0, 3).toUpperCase();
         }
+
         function getTaskStatusClass(task) {
-            return task.status === 'done' ? 'completed' : '';
+            if (task.status === 'done') return 'completed';
+            if (task.status === 'blocked') return 'blocked';
+            if (task.status === 'in_progress') return 'in-progress';
+            return '';
         }
+
+        function getStatusClass(status) {
+            if (status === 'todo') return 'status-todo';
+            if (status === 'in_progress') return 'status-in-progress';
+            if (status === 'done') return 'status-done';
+            if (status === 'blocked') return 'status-blocked';
+            return '';
+        }
+
+        function getStatusLabel(status) {
+            if (status === 'todo') return 'TODO';
+            if (status === 'in_progress') return 'IN PROGRESS';
+            if (status === 'done') return 'DONE';
+            if (status === 'blocked') return 'BLOCKED';
+            return status ? status.toUpperCase() : '';
+        }
+
+        function formatTokens(tokens) {
+            if (!tokens) return '0';
+            if (tokens < 1000) return tokens.toString();
+            return (tokens / 1000).toFixed(1) + 'k';
+        }
+
         function selectProject(id, name) {
             currentProjectId = id;
             document.getElementById('current-project-title').innerText = name.toUpperCase();
@@ -99,6 +166,7 @@
             loadProjects();
             loadTasks();
         }
+
         async function loadTasks() {
             if (!currentProjectId) return;
             const tasks = await fetchSafe(API + '/tasks/project/' + currentProjectId);
@@ -108,10 +176,50 @@
                 const statusClass = getTaskStatusClass(t);
                 const priorityClass = getPriorityClass(t.priority);
                 const priorityLabel = getPriorityLabel(t.priority);
+                const statusLabel = getStatusLabel(t.status);
+                const statusBadge = `<span class="status-badge ${getStatusClass(t.status)}">${statusLabel}</span>`;
                 const assignedHtml = t.assigned_to ? '<span class="assigned-to">@' + t.assigned_to + '</span>' : '';
-                return '<div class="task-item ' + statusClass + '"><div class="task-content"><input type="checkbox" ' + (statusClass ? 'checked' : '') + ' onchange="toggleTask(' + t.id + ', ' + (statusClass ? 'false' : 'true') + ')"><span class="priority-badge ' + priorityClass + '">' + priorityLabel + '</span><span>' + t.title + '</span>' + assignedHtml + '</div><button class="del-btn" onclick="deleteTask(' + t.id + ')" title="Delete Task">×</button></div>';
+
+                // Progress bar
+                const progressHtml = t.progress > 0 ? `
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: ${t.progress}%"></div>
+                    </div>
+                    <span class="progress-text">${t.progress}%</span>
+                ` : '';
+
+                // Model/token info
+                const modelInfoHtml = t.model_used ? `
+                    <div class="model-info">
+                        🤖 ${t.model_used} · ${formatTokens(t.tokens_in)} in · ${formatTokens(t.tokens_out)} out
+                    </div>
+                ` : '';
+
+                // Blocked reason
+                const blockedHtml = t.status === 'blocked' && t.blocked_reason ? `
+                    <div class="blocked-reason">⛔ ${t.blocked_reason}</div>
+                ` : '';
+
+                return `
+                    <div class="task-item ${statusClass}">
+                        <div class="task-content">
+                            <input type="checkbox" ${statusClass === 'completed' ? 'checked' : ''} onchange="toggleTask(${t.id}, ${statusClass === 'completed' ? 'false' : 'true'})">
+                            <span class="priority-badge ${priorityClass}">${priorityLabel}</span>
+                            ${statusBadge}
+                            <span>${t.title}</span>
+                            ${assignedHtml}
+                        </div>
+                        <div class="task-details">
+                            ${progressHtml}
+                            ${modelInfoHtml}
+                            ${blockedHtml}
+                        </div>
+                        <button class="del-btn" onclick="deleteTask(${t.id})" title="Delete Task">×</button>
+                    </div>
+                `;
             }).join('');
         }
+
         async function addProject() {
             const input = document.getElementById('new-project');
             const name = input.value;
@@ -120,6 +228,7 @@
             input.value = '';
             loadProjects();
         }
+
         async function deleteProject(id, event) {
             if (event) event.stopPropagation();
             if (!confirm('Delete project and all tasks?')) return;
@@ -131,6 +240,7 @@
             }
             loadProjects();
         }
+
         async function addTask() {
             const input = document.getElementById('new-task');
             const title = input.value;
@@ -140,43 +250,48 @@
             loadTasks();
             input.focus();
         }
+
         async function toggleTask(id, markAsDone) {
             const status = markAsDone ? 'done' : 'todo';
             await fetchSafe(API + '/tasks/' + id, { method: 'PATCH', body: JSON.stringify({ status }) });
             loadTasks();
         }
+
         async function deleteTask(id) {
             if (!confirm('Delete task?')) return;
             await fetchSafe(API + '/tasks/' + id, { method: 'DELETE' });
             loadTasks();
         }
+
         function handleLogout(event) {
             event.preventDefault();
+            if (agentInterval) clearInterval(agentInterval);
             localStorage.removeItem('token');
             window.location.href = '/login.html';
         }
+
         document.getElementById('new-task').addEventListener('keypress', function (e) { if (e.key === 'Enter') addTask(); });
         document.getElementById('new-project').addEventListener('keypress', function (e) { if (e.key === 'Enter') addProject(); });
-        
+
         // Event delegation for project list
         document.getElementById('project-list').addEventListener('click', (e) => {
             const li = e.target.closest('li');
             if (!li) return;
-            
+
             const projectId = li.dataset.projectId;
             const projectName = li.dataset.projectName;
-            
+
             // Check if delete button was clicked
             if (e.target.classList.contains('del-btn') || e.target.dataset.action === 'delete') {
                 e.stopPropagation();
                 deleteProject(projectId, e);
                 return;
             }
-            
+
             // Otherwise, select the project
             selectProject(projectId, projectName);
         });
-        
+
         loadProjects();
     </script>
 </body>
