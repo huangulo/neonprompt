@@ -9,7 +9,7 @@ const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3335;
-const db = new Database('tasks.db');
+const db = require("./src/db.js");
 
 // Enable Foreign Keys for CASCADE DELETE
 db.pragma('foreign_keys = ON');
