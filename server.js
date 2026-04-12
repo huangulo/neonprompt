@@ -1,10 +1,7 @@
 require('dotenv').config();
 const express = require('express');
-const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 
 const app = express();
@@ -19,85 +16,27 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Session with SQLite store
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dashboard-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  store: new SQLiteStore({ db: 'sessions.db' }),
-  cookie: { 
-    maxAge: 24 * 60 * 60 * 1000,
-    secure: false
-  }
-}));
+// Import routes and middleware
+const authRoutes = require('./src/routes/auth.js');
+const keysRoutes = require('./src/routes/keys.js');
+const { authenticateAny } = require('./src/middleware/auth.js');
 
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'password';
+// Mount auth routes (no auth required)
+app.use('/auth', authRoutes);
+app.use('/api/v1/keys', keysRoutes);
 
-// Auth middleware
-const requireAuth = (req, res, next) => {
-  if (req.session && req.session.authenticated) {
-    next();
-  } else {
-    if (req.path.startsWith('/api')) {
-      res.status(401).json({ error: 'Unauthorized' });
-    } else {
-      res.redirect('/login');
-    }
-  }
-};
+// Serve static files (login.html is accessible without auth)
+app.use(express.static('public'));
 
-// Public Routes
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
-    req.session.authenticated = true;
-    res.status(200).send('OK');
-  } else {
-    res.status(401).send('Invalid credentials');
-  }
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
-});
-
-// Protected Routes
-app.use(requireAuth, express.static('public'));
-
-// Init DB
-db.exec(`
-  CREATE TABLE IF NOT EXISTS projects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    status TEXT DEFAULT 'active'
-  );
-
-  CREATE TABLE IF NOT EXISTS tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
-    title TEXT NOT NULL,
-    completed BOOLEAN DEFAULT 0,
-    comments TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-  );
-`);
-
-// API Endpoints
+// API Endpoints - protected with authenticateAny
 
 // 1. Projects
-app.get('/api/projects', (req, res) => {
+app.get('/api/projects', authenticateAny, (req, res) => {
   const rows = db.prepare("SELECT * FROM projects ORDER BY id DESC").all();
   res.json(rows);
 });
 
-app.post('/api/projects', (req, res) => {
+app.post('/api/projects', authenticateAny, (req, res) => {
   const { name } = req.body;
   try {
     const info = db.prepare("INSERT INTO projects (name) VALUES (?)").run(name);
@@ -107,7 +46,7 @@ app.post('/api/projects', (req, res) => {
   }
 });
 
-app.delete('/api/projects/:id', (req, res) => {
+app.delete('/api/projects/:id', authenticateAny, (req, res) => {
   try {
     db.prepare("DELETE FROM projects WHERE id = ?").run(req.params.id);
     res.json({ success: true });
@@ -117,19 +56,19 @@ app.delete('/api/projects/:id', (req, res) => {
 });
 
 // 2. Tasks
-app.get('/api/tasks/:projectId', (req, res) => {
+app.get('/api/tasks/:projectId', authenticateAny, (req, res) => {
   const { projectId } = req.params;
   const rows = db.prepare("SELECT * FROM tasks WHERE project_id = ? ORDER BY completed ASC, created_at DESC").all(projectId);
   res.json(rows);
 });
 
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', authenticateAny, (req, res) => {
   const { projectId, title } = req.body;
   const info = db.prepare("INSERT INTO tasks (project_id, title) VALUES (?, ?)").run(projectId, title);
   res.json({ id: info.lastInsertRowid, projectId, title, completed: 0 });
 });
 
-app.patch('/api/tasks/:id', (req, res) => {
+app.patch('/api/tasks/:id', authenticateAny, (req, res) => {
   const { id } = req.params;
   const updates = Object.keys(req.body).map(key => `${key} = @${key}`).join(', ');
   const stmt = db.prepare(`UPDATE tasks SET ${updates} WHERE id = @id`);
@@ -137,7 +76,7 @@ app.patch('/api/tasks/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/tasks/:id', (req, res) => {
+app.delete('/api/tasks/:id', authenticateAny, (req, res) => {
   db.prepare("DELETE FROM tasks WHERE id = ?").run(req.params.id);
   res.json({ success: true });
 });

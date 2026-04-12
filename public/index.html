@@ -4,37 +4,28 @@
     <title>Project Dashboard</title>
     <style>
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
-        
         .header { background-color: #222; padding: 0 40px; height: 70px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; flex-shrink: 0; }
         .header h1 { margin: 0; font-size: 24px; color: #4a9eff; }
         .logout-btn { background-color: #ff4a4a; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; font-size: 0.9em; border: none; }
         .logout-btn:hover { background-color: #d43f3f; }
-        
         .workspace { display: flex; flex: 1; overflow: hidden; }
-        
         .sidebar { width: 300px; background-color: #222; border-right: 1px solid #333; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
-        
         .main { flex: 1; padding: 40px; overflow-y: auto; background-color: #1a1a1a; }
-
         h2 { color: #4a9eff; margin-top: 0; font-size: 18px; margin-bottom: 15px; }
-        
         ul { list-style: none; padding: 0; margin: 0; }
         li { padding: 12px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; color: #ccc; }
         li:hover { background-color: #333; color: white; }
         li.active { background-color: #333; color: #4a9eff; font-weight: bold; border-left: 3px solid #4a9eff; }
-        
         input[type="text"] { background-color: #333; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline: none; }
         input[type="text"]:focus { border-color: #4a9eff; }
         .add-btn { background-color: #4a9eff; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .add-btn:hover { background-color: #357abd; }
         .del-btn { color: #666; background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0 5px; }
         .del-btn:hover { color: #ff4a4a; }
-
         .task-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; }
         .task-item:last-child { border-bottom: none; }
         .task-item.completed span { text-decoration: line-through; color: #666; }
         input[type="checkbox"] { margin-right: 15px; transform: scale(1.2); cursor: pointer; accent-color: #4a9eff; }
-        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1a1a1a; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
@@ -44,9 +35,8 @@
 <body>
     <div class="header">
         <h1>Project Dashboard</h1>
-        <a href="/logout" class="logout-btn">Logout</a>
+        <a href="/login" class="logout-btn" onclick="handleLogout(event)">Logout</a>
     </div>
-
     <div class="workspace">
         <div class="sidebar">
             <div style="margin-bottom: 20px; display: flex; gap: 10px;">
@@ -55,7 +45,6 @@
             </div>
             <ul id="project-list"></ul>
         </div>
-        
         <div class="main">
             <h2 id="current-project-title" style="border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; font-size: 24px; color: #4a9eff;">Select a Project</h2>
             <div id="task-container" style="display: none;">
@@ -67,30 +56,32 @@
             </div>
         </div>
     </div>
-
     <script>
-        window.onerror = function(msg, url, line) {
-            console.error('JS Error:', msg);
-            alert('App Error: ' + msg);
-            return false;
-        };
-
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login';
+        }
+        function authHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            };
+        }
         let currentProjectId = null;
         const API = '/api';
-
         async function fetchSafe(url, options = {}) {
-                options.credentials = "include";
-                options.headers = options.headers || {};
-                options.headers["Content-Type"] = options.headers["Content-Type"] || "application/json";
+            options.credentials = "include";
+            options.headers = { ...authHeaders(), ...(options.headers || {}) };
             try {
                 const res = await fetch(url, options);
                 if (res.status === 401) {
+                    localStorage.removeItem('token');
                     window.location.href = '/login';
                     return null;
                 }
                 if (!res.ok) {
                     const errorText = await res.text();
-                    throw new Error(`Server Error (${res.status}): ${errorText}`);
+                    throw new Error("Server Error (" + res.status + "): " + errorText);
                 }
                 return res.json();
             } catch (err) {
@@ -99,68 +90,41 @@
                 throw err;
             }
         }
-
         async function loadProjects() {
-            const projects = await fetchSafe(`${API}/projects`);
+            const projects = await fetchSafe(API + '/projects');
             if (!projects) return;
-
             const list = document.getElementById('project-list');
             list.innerHTML = projects.map(p => {
                 const safeName = p.name.replace(/'/g, "\\'");
-                return `
-                <li class="${p.id === currentProjectId ? 'active' : ''}">
-                    <span onclick="selectProject(${p.id}, '${safeName}')">${p.name}</span>
-                    <button class="del-btn" onclick="deleteProject(${p.id}, event)" title="Delete Project">×</button>
-                </li>
-            `}).join('');
+                return '<li class="' + (p.id === currentProjectId ? 'active' : '') + '"><span onclick="selectProject(' + p.id + ', \'" + safeName + '\\')">' + p.name + '</span><button class="del-btn" onclick="deleteProject(' + p.id + ', event)" title="Delete Project">×</button></li>';
+            }).join('');
         }
-
         async function selectProject(id, name) {
-            console.log('Selecting project:', id, name);
             currentProjectId = id;
             document.getElementById('current-project-title').innerText = name;
             document.getElementById('task-container').style.display = 'block';
-            loadProjects(); 
+            loadProjects();
             loadTasks();
         }
-
         async function loadTasks() {
             if (!currentProjectId) return;
-            const tasks = await fetchSafe(`${API}/tasks/${currentProjectId}`);
+            const tasks = await fetchSafe(API + '/tasks/' + currentProjectId);
             if (!tasks) return;
-
             const list = document.getElementById('task-list');
-            list.innerHTML = tasks.map(t => `
-                <div class="task-item ${t.completed ? 'completed' : ''}">
-                    <div>
-                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id}, this.checked)">
-                        <span>${t.title}</span>
-                    </div>
-                    <button class="del-btn" onclick="deleteTask(${t.id})" title="Delete Task">×</button>
-                </div>
-            `).join('');
+            list.innerHTML = tasks.map(t => '<div class="task-item ' + (t.completed ? 'completed' : '') + '"><div><input type="checkbox" ' + (t.completed ? 'checked' : '') + ' onchange="toggleTask(' + t.id + ', this.checked)"><span>' + t.title + '</span></div><button class="del-btn" onclick="deleteTask(' + t.id + ')" title="Delete Task">×</button></div>').join('');
         }
-
         async function addProject() {
             const input = document.getElementById('new-project');
             const name = input.value;
             if (!name) return;
-            
-            await fetchSafe(`${API}/projects`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
+            await fetchSafe(API + '/projects', { method: 'POST', body: JSON.stringify({ name }) });
             input.value = '';
             loadProjects();
         }
-
         async function deleteProject(id, event) {
-            if (event) event.stopPropagation(); 
-            if (!confirm('Are you sure you want to delete this project and ALL its tasks?')) return;
-            
-            await fetchSafe(`${API}/projects/${id}`, { method: 'DELETE' });
-            
+            if (event) event.stopPropagation();
+            if (!confirm('Delete project and all tasks?')) return;
+            await fetchSafe(API + '/projects/' + id, { method: 'DELETE' });
             if (currentProjectId === id) {
                 currentProjectId = null;
                 document.getElementById('current-project-title').innerText = 'Select a Project';
@@ -168,46 +132,31 @@
             }
             loadProjects();
         }
-
         async function addTask() {
             const input = document.getElementById('new-task');
             const title = input.value;
             if (!title || !currentProjectId) return;
-            
-            await fetchSafe(`${API}/tasks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId: currentProjectId, title })
-            });
+            await fetchSafe(API + '/tasks', { method: 'POST', body: JSON.stringify({ projectId: currentProjectId, title }) });
             input.value = '';
             loadTasks();
             input.focus();
         }
-
         async function toggleTask(id, completed) {
-            await fetchSafe(`${API}/tasks/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ completed: completed ? 1 : 0 })
-            });
+            await fetchSafe(API + '/tasks/' + id, { method: 'PATCH', body: JSON.stringify({ completed: completed ? 1 : 0 }) });
             loadTasks();
         }
-
         async function deleteTask(id) {
             if (!confirm('Delete task?')) return;
-            await fetchSafe(`${API}/tasks/${id}`, { method: 'DELETE' });
+            await fetchSafe(API + '/tasks/' + id, { method: 'DELETE' });
             loadTasks();
         }
-
-        document.getElementById('new-task').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') addTask();
-        });
-
-        document.getElementById('new-project').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') addProject();
-        });
-
-        console.log('App initialized');
+        function handleLogout(event) {
+            event.preventDefault();
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+        document.getElementById('new-task').addEventListener('keypress', function (e) { if (e.key === 'Enter') addTask(); });
+        document.getElementById('new-project').addEventListener('keypress', function (e) { if (e.key === 'Enter') addProject(); });
         loadProjects();
     </script>
 </body>

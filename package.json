@@ -7,14 +7,15 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.5.0",
     "body-parser": "^1.20.3",
-    "connect-sqlite3": "^0.9.16",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.21.1",
     "express-basic-auth": "^1.2.1",
-    "express-session": "^1.19.0",
-    "jsdom": "^28.1.0"
+    "jsdom": "^28.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "uuid": "^13.0.0"
   }
 }

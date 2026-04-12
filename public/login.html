@@ -53,6 +53,11 @@
             margin-top: 15px;
             display: none;
         }
+        .success {
+            color: #4a9eff;
+            margin-top: 15px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -63,6 +68,7 @@
             <input type="password" id="password" placeholder="Password" required>
             <button type="submit">Login</button>
             <div id="error-msg" class="error">Invalid username or password</div>
+            <div id="success-msg" class="success">First user created!</div>
         </form>
     </div>
 
@@ -72,14 +78,32 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
-            const res = await fetch('/login', {
+            // Try login first
+            let res = await fetch('/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
 
+            // If 401, try setup (first-run bootstrap)
+            if (res.status === 401) {
+                res = await fetch('/auth/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (res.ok) {
+                    document.getElementById('success-msg').style.display = 'block';
+                }
+            }
+
             if (res.ok) {
-                window.location.href = '/';
+                const data = await res.json();
+                localStorage.setItem('token', data.data.token);
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
             } else {
                 document.getElementById('error-msg').style.display = 'block';
             }
