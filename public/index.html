@@ -156,14 +156,16 @@
             return '';
         }
 
-        function getStatusColor(status) {
-            if (status === 'drafted') return '#7b61ff';
-            if (status === 'todo') return '#6b7280';
-            if (status === 'in_progress') return '#00ffc8';
-            if (status === 'done') return '#00ffc8';
-            if (status === 'blocked') return '#ff3366';
-            if (status === 'needs_revision') return '#ff9f1c';
-            return '#6b7280';
+        function getStatusBadgeStyle(status) {
+            const styles = {
+                drafted:        'background: rgba(123,97,255,0.15); border: 1px solid #7b61ff; color: #7b61ff;',
+                todo:           'background: rgba(107,114,128,0.15); border: 1px solid rgba(107,114,128,0.4); color: #6b7280;',
+                in_progress:    'background: rgba(0,255,200,0.15); border: 1px solid #00ffc8; color: #00ffc8;',
+                done:           'background: rgba(0,255,200,0.15); border: 1px solid #00ffc8; color: #00ffc8;',
+                blocked:        'background: rgba(255,51,102,0.15); border: 1px solid #ff3366; color: #ff3366;',
+                needs_revision: 'background: rgba(255,159,28,0.15); border: 1px solid #ff9f1c; color: #ff9f1c;',
+            };
+            return styles[status] || styles.todo;
         }
 
         function getStatusLabel(status) {
@@ -198,7 +200,6 @@
             const list = document.getElementById('task-list');
             list.innerHTML = tasks.map(t => {
                 const statusClass = getTaskStatusClass(t.status);
-                const statusColor = getStatusColor(t.status);
                 const statusLabel = getStatusLabel(t.status);
                 const priorityClass = getPriorityClass(t.priority);
                 const priorityLabel = getPriorityLabel(t.priority);
@@ -227,14 +228,12 @@
                     </div>
                 ` : '';
 
-                // Output section with textarea for editing
+                // Output section (always shown, editable)
                 const outputHtml = `
                     <div class="output-section">
                         <div class="section-header">OUTPUT</div>
-                        <div class="code-block" style="border-color: #7b61ff;">
-                            <textarea id="output-${t.id}" class="output-textarea" placeholder="${t.output ? '' : 'Awaiting output...'}">${t.output ? escapeHtml(t.output) : ''}</textarea>
-                        </div>
-                        <button class="btn btn-small btn-save" onclick="saveOutput(${t.id})">SAVE OUTPUT</button>
+                        <textarea class="output-textarea" id="output-textarea-${t.id}">${escapeHtml(t.output || '')}</textarea>
+                        <button class="save-output-btn" onclick="saveOutput(${t.id}); event.stopPropagation();">SAVE OUTPUT</button>
                     </div>
                 `;
 
@@ -244,10 +243,10 @@
                 ` : '';
 
                 return `
-                    <div class="task-item ${statusClass}" data-task-id="${t.id}" onclick="toggleTaskExpand(${t.id}, event)">
+                    <div class="task-item ${statusClass}" data-task-id="${t.id}">
                         <div class="task-header">
-                            <button class="status-dropdown-btn" onclick="toggleTaskDropdown(${t.id}, event)">
-                                <span class="status-badge ${statusClass}" style="background: ${statusColor}; border: none;">${statusLabel}</span>
+                            <button class="status-dropdown-btn" onclick="toggleTaskDropdown(${t.id})">
+                                <span class="status-badge" style="${getStatusBadgeStyle(t.status)}">${statusLabel}</span>
                             </button>
                             <div class="status-dropdown" id="dropdown-${t.id}" style="display: none;">
                                 <div class="status-option ${t.status === 'drafted' ? 'selected' : ''}" data-status="drafted" style="color: #7b61ff;">DRAFTED</div>
@@ -258,7 +257,7 @@
                                 <div class="status-option ${t.status === 'needs_revision' ? 'selected' : ''}" data-status="needs_revision" style="color: #ff9f1c;">NEEDS REVISION</div>
                             </div>
                             <div class="task-actions">
-                                <button class="del-btn" onclick="deleteTask(${t.id}, event)" title="Delete Task">×</button>
+                                <button class="del-btn" onclick="deleteTask(${t.id})" title="Delete Task">×</button>
                             </div>
                         </div>
                         <div class="task-title-row">
@@ -314,15 +313,13 @@
             loadTasks();
         }
 
-        async function deleteTask(id, event) {
-            if (event) event.stopPropagation();
+        async function deleteTask(id) {
             if (!confirm('Delete task?')) return;
             await fetchSafe(API + '/tasks/' + id, { method: 'DELETE' });
             loadTasks();
         }
 
-        async function toggleTaskDropdown(id, event) {
-            if (event) event.stopPropagation();
+        async function toggleTaskDropdown(id) {
             const dropdown = document.getElementById('dropdown-' + id);
             const allDropdowns = document.querySelectorAll('.status-dropdown');
             allDropdowns.forEach(d => {
@@ -336,31 +333,6 @@
                 method: 'PATCH',
                 body: JSON.stringify({ status })
             });
-            loadTasks();
-        }
-
-        function toggleTaskExpand(id, event) {
-            const taskItem = document.querySelector(`.task-item[data-task-id="${id}"]`);
-            const allTasks = document.querySelectorAll('.task-item');
-            
-            // Toggle expansion
-            taskItem.classList.toggle('expanded');
-        }
-
-        async function saveOutput(id) {
-            const outputTextarea = document.getElementById(`output-${id}`);
-            const output = outputTextarea.value.trim();
-            
-            if (!output) {
-                alert('Please enter output before saving');
-                return;
-            }
-            
-            await fetchSafe(API + '/tasks/' + id, {
-                method: 'PATCH',
-                body: JSON.stringify({ output })
-            });
-            
             loadTasks();
         }
 
@@ -409,19 +381,8 @@
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.status-dropdown-btn') && !e.target.closest('.status-dropdown')) {
+            if (!e.target.closest('.status-dropdown-btn')) {
                 document.querySelectorAll('.status-dropdown').forEach(d => d.style.display = 'none');
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('status-option')) {
-                const statusOption = e.target;
-                const status = statusOption.dataset.status;
-                const taskId = parseInt(statusOption.closest('.status-dropdown').id.replace('dropdown-', ''));
-                
-                e.stopPropagation();
-                changeTaskStatus(taskId, status);
             }
         });
 
@@ -430,6 +391,28 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        async function saveOutput(taskId) {
+            const textarea = document.getElementById('output-textarea-' + taskId);
+            await fetchSafe(API + '/tasks/' + taskId, {
+                method: 'PATCH',
+                body: JSON.stringify({ output: textarea.value })
+            });
+        }
+
+        document.getElementById('task-list').addEventListener('click', (e) => {
+            if (e.target.closest('.status-dropdown-btn') ||
+                e.target.closest('.status-dropdown') ||
+                e.target.closest('.del-btn') ||
+                e.target.closest('.save-output-btn') ||
+                e.target.tagName === 'TEXTAREA' ||
+                e.target.tagName === 'BUTTON') return;
+
+            const taskItem = e.target.closest('.task-item');
+            if (!taskItem) return;
+
+            taskItem.classList.toggle('expanded');
+        });
 
         loadProjects();
     </script>

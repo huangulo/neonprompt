@@ -70,6 +70,46 @@ router.get('/project/:projectId', authenticateAny, (req, res) => {
 });
 
 /**
+ * GET /queue/:agentLabel — tasks assigned to an agent with status drafted or todo, priority-sorted
+ */
+router.get('/queue/:agentLabel', authenticateAny, (req, res) => {
+    try {
+        const { agentLabel } = req.params;
+
+        const tasks = db.prepare(`
+            SELECT t.*, p.name as project_name
+            FROM tasks t
+            JOIN projects p ON t.project_id = p.id
+            WHERE t.assigned_to = ?
+              AND t.status IN ('drafted', 'todo')
+            ORDER BY
+                CASE t.priority
+                    WHEN 'urgent' THEN 1
+                    WHEN 'high'   THEN 2
+                    WHEN 'medium' THEN 3
+                    WHEN 'low'    THEN 4
+                    ELSE 5
+                END ASC,
+                t.created_at ASC
+        `).all(agentLabel);
+
+        res.json({
+            success: true,
+            data: tasks
+        });
+    } catch (err) {
+        console.error('[TASKS] Queue error:', err);
+        res.status(500).json({
+            success: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Failed to get task queue'
+            }
+        });
+    }
+});
+
+/**
  * GET /:id — single task with project name
  */
 router.get('/:id', authenticateAny, (req, res) => {
