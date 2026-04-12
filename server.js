@@ -21,6 +21,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1/auth', authRoutes);
 
 // Mount v1 routes
+app.use('/api/v1/tasks', taskRoutes);
+app.use('/api/v1/activity', activityRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/activity', activityRoutes);
