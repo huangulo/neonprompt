@@ -78,7 +78,7 @@
             const list = document.getElementById('project-list');
             list.innerHTML = projects.map(p => {
                 const safeName = p.name.replace(/'/g, "\\'");
-                return `<li class="${p.id === currentProjectId ? 'active' : ''}"><span onclick="selectProject(${p.id}, '${safeName}')">${p.name.toUpperCase()}</span><button class="del-btn" onclick="deleteProject(${p.id}, event)" title="Delete Project">×</button></li>`;
+                return `<li class="${p.id === currentProjectId ? 'active' : ''}" data-project-id="${p.id}" data-project-name="${safeName}"><span>${p.name.toUpperCase()}</span><button class="del-btn" data-action="delete" title="Delete Project">×</button></li>`;
             }).join('');
         }
         function getPriorityClass(priority) {
@@ -157,6 +157,26 @@
         }
         document.getElementById('new-task').addEventListener('keypress', function (e) { if (e.key === 'Enter') addTask(); });
         document.getElementById('new-project').addEventListener('keypress', function (e) { if (e.key === 'Enter') addProject(); });
+        
+        // Event delegation for project list
+        document.getElementById('project-list').addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (!li) return;
+            
+            const projectId = li.dataset.projectId;
+            const projectName = li.dataset.projectName;
+            
+            // Check if delete button was clicked
+            if (e.target.classList.contains('del-btn') || e.target.dataset.action === 'delete') {
+                e.stopPropagation();
+                deleteProject(projectId, e);
+                return;
+            }
+            
+            // Otherwise, select the project
+            selectProject(projectId, projectName);
+        });
+        
         loadProjects();
     </script>
 </body>
