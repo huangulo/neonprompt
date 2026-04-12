@@ -1,56 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Dashboard</title>
-    <style>
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
-        .header { background-color: #222; padding: 0 40px; height: 70px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; flex-shrink: 0; }
-        .header h1 { margin: 0; font-size: 24px; color: #4a9eff; }
-        .logout-btn { background-color: #ff4a4a; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; font-size: 0.9em; border: none; }
-        .logout-btn:hover { background-color: #d43f3f; }
-        .workspace { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 300px; background-color: #222; border-right: 1px solid #333; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
-        .main { flex: 1; padding: 40px; overflow-y: auto; background-color: #1a1a1a; }
-        h2 { color: #4a9eff; margin-top: 0; font-size: 18px; margin-bottom: 15px; }
-        ul { list-style: none; padding: 0; margin: 0; }
-        li { padding: 12px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; color: #ccc; }
-        li:hover { background-color: #333; color: white; }
-        li.active { background-color: #333; color: #4a9eff; font-weight: bold; border-left: 3px solid #4a9eff; }
-        input[type="text"] { background-color: #333; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline: none; }
-        input[type="text"]:focus { border-color: #4a9eff; }
-        .add-btn { background-color: #4a9eff; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .add-btn:hover { background-color: #357abd; }
-        .del-btn { color: #666; background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0 5px; }
-        .del-btn:hover { color: #ff4a4a; }
-        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; }
-        .task-item:last-child { border-bottom: none; }
-        .task-item.completed span { text-decoration: line-through; color: #666; }
-        input[type="checkbox"] { margin-right: 15px; transform: scale(1.2); cursor: pointer; accent-color: #4a9eff; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1a1a1a; }
-        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="header">
-        <h1>Project Dashboard</h1>
-        <a href="/login.html" class="logout-btn" onclick="handleLogout(event)">Logout</a>
+        <h1>PROJECT DASHBOARD</h1>
+        <a href="/login.html" class="logout-btn" onclick="handleLogout(event)">LOGOUT</a>
     </div>
     <div class="workspace">
         <div class="sidebar">
-            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                <input type="text" id="new-project" placeholder="New Project..." style="flex-grow: 1;">
+            <div style="margin-bottom: 25px; display: flex; gap: 10px; flex-direction: column;">
+                <input type="text" id="new-project" placeholder="NEW PROJECT..." style="font-family: 'Orbitron', sans-serif; letter-spacing: 1px; font-size: 12px; text-transform: uppercase;">
                 <button class="add-btn" onclick="addProject()">+</button>
             </div>
             <ul id="project-list"></ul>
         </div>
         <div class="main">
-            <h2 id="current-project-title" style="border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; font-size: 24px; color: #4a9eff;">Select a Project</h2>
+            <h2 id="current-project-title" style="border-bottom: 1px solid rgba(0, 255, 200, 0.2); padding-bottom: 20px; margin-bottom: 25px; font-size: 28px; letter-spacing: 2px;">SELECT A PROJECT</h2>
             <div id="task-container" style="display: none;">
-                <div style="margin-bottom: 25px; display: flex; gap: 10px;">
-                    <input type="text" id="new-task" placeholder="Add a new task..." style="flex-grow: 1; padding: 12px;">
-                    <button class="add-btn" onclick="addTask()">Add Task</button>
+                <div style="margin-bottom: 30px; display: flex; gap: 12px; flex-direction: column;">
+                    <input type="text" id="new-task" placeholder="ADD A NEW TASK..." style="flex-grow: 1; padding: 14px; font-family: 'Orbitron', sans-serif; letter-spacing: 1px; font-size: 12px; text-transform: uppercase;">
+                    <button class="add-btn" onclick="addTask()">ADD TASK</button>
                 </div>
                 <div id="task-list"></div>
             </div>
@@ -83,7 +60,11 @@
                     const errorText = await res.text();
                     throw new Error("Server Error (" + res.status + "): " + errorText);
                 }
-                return res.json();
+                const result = await res.json();
+                if (!result.success) {
+                    throw new Error(result.error.message || 'API Error');
+                }
+                return result.data;
             } catch (err) {
                 console.error('Fetch Error:', err);
                 alert('Connection Error: ' + err.message);
@@ -91,17 +72,29 @@
             }
         }
         async function loadProjects() {
-            const projects = await fetchSafe(API + '/projects');
-            if (!projects) return;
+            const result = await fetchSafe(API + '/projects');
+            if (!result) return;
+            const projects = result;
             const list = document.getElementById('project-list');
             list.innerHTML = projects.map(p => {
                 const safeName = p.name.replace(/'/g, "\\'");
-                return '<li class="' + (p.id === currentProjectId ? 'active' : '') + '"><span onclick="selectProject(' + p.id + ', \'" + safeName + '\\')">' + p.name + '</span><button class="del-btn" onclick="deleteProject(' + p.id + ', event)" title="Delete Project">×</button></li>';
+                return '<li class="' + (p.id === currentProjectId ? 'active' : '') + '"><span onclick="selectProject(' + p.id + ', \'" + safeName + '\\')">' + p.name.toUpperCase() + '</span><button class="del-btn" onclick="deleteProject(' + p.id + ', event)" title="Delete Project">×</button></li>';
             }).join('');
         }
-        async function selectProject(id, name) {
+        function getPriorityClass(priority) {
+            if (!priority) return 'priority-medium';
+            return 'priority-' + (priority || 'medium').toLowerCase();
+        }
+        function getPriorityLabel(priority) {
+            if (!priority) return 'MED';
+            return (priority || 'medium').substring(0, 3).toUpperCase();
+        }
+        function getTaskStatusClass(task) {
+            return task.status === 'done' ? 'completed' : '';
+        }
+        function selectProject(id, name) {
             currentProjectId = id;
-            document.getElementById('current-project-title').innerText = name;
+            document.getElementById('current-project-title').innerText = name.toUpperCase();
             document.getElementById('task-container').style.display = 'block';
             loadProjects();
             loadTasks();
@@ -111,7 +104,13 @@
             const tasks = await fetchSafe(API + '/tasks/project/' + currentProjectId);
             if (!tasks) return;
             const list = document.getElementById('task-list');
-            list.innerHTML = tasks.map(t => '<div class="task-item ' + (t.completed ? 'completed' : '') + '"><div><input type="checkbox" ' + (t.completed ? 'checked' : '') + ' onchange="toggleTask(' + t.id + ', this.checked)"><span>' + t.title + '</span></div><button class="del-btn" onclick="deleteTask(' + t.id + ')" title="Delete Task">×</button></div>').join('');
+            list.innerHTML = tasks.map(t => {
+                const statusClass = getTaskStatusClass(t);
+                const priorityClass = getPriorityClass(t.priority);
+                const priorityLabel = getPriorityLabel(t.priority);
+                const assignedHtml = t.assigned_to ? '<span class="assigned-to">@' + t.assigned_to + '</span>' : '';
+                return '<div class="task-item ' + statusClass + '"><div class="task-content"><input type="checkbox" ' + (statusClass ? 'checked' : '') + ' onchange="toggleTask(' + t.id + ', ' + (statusClass ? 'false' : 'true') + ')"><span class="priority-badge ' + priorityClass + '">' + priorityLabel + '</span><span>' + t.title + '</span>' + assignedHtml + '</div><button class="del-btn" onclick="deleteTask(' + t.id + ')" title="Delete Task">×</button></div>';
+            }).join('');
         }
         async function addProject() {
             const input = document.getElementById('new-project');
@@ -127,7 +126,7 @@
             await fetchSafe(API + '/projects/' + id, { method: 'DELETE' });
             if (currentProjectId === id) {
                 currentProjectId = null;
-                document.getElementById('current-project-title').innerText = 'Select a Project';
+                document.getElementById('current-project-title').innerText = 'SELECT A PROJECT';
                 document.getElementById('task-container').style.display = 'none';
             }
             loadProjects();
@@ -141,8 +140,9 @@
             loadTasks();
             input.focus();
         }
-        async function toggleTask(id, completed) {
-            await fetchSafe(API + '/tasks/' + id, { method: 'PATCH', body: JSON.stringify({ completed: completed ? 1 : 0 }) });
+        async function toggleTask(id, markAsDone) {
+            const status = markAsDone ? 'done' : 'todo';
+            await fetchSafe(API + '/tasks/' + id, { method: 'PATCH', body: JSON.stringify({ status }) });
             loadTasks();
         }
         async function deleteTask(id) {
