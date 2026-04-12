@@ -19,67 +19,27 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Import routes and middleware
 const authRoutes = require('./src/routes/auth.js');
 const keysRoutes = require('./src/routes/keys.js');
-const { authenticateAny } = require('./src/middleware/auth.js');
+const projectRoutes = require('./src/routes/projects.js');
+const taskRoutes = require('./src/routes/tasks.js');
+const activityRoutes = require('./src/routes/activity.js');
 
-// Mount auth routes (no auth required)
-app.use('/auth', authRoutes);
-app.use('/api/v1/keys', keysRoutes);
+// Mount v1 routes
+app.use('/api/v1/projects', projectRoutes);
+app.use('/api/v1/tasks', taskRoutes);
+app.use('/api/v1/activity', activityRoutes);
+
+// Health endpoint (no auth required)
+app.get('/health', (req, res) => {
+  const uptime = process.uptime();
+  res.json({
+    status: 'ok',
+    version: '2.0.0',
+    uptime: uptime
+  });
+});
 
 // Serve static files (login.html is accessible without auth)
 app.use(express.static('public'));
-
-// API Endpoints - protected with authenticateAny
-
-// 1. Projects
-app.get('/api/projects', authenticateAny, (req, res) => {
-  const rows = db.prepare("SELECT * FROM projects ORDER BY id DESC").all();
-  res.json(rows);
-});
-
-app.post('/api/projects', authenticateAny, (req, res) => {
-  const { name } = req.body;
-  try {
-    const info = db.prepare("INSERT INTO projects (name) VALUES (?)").run(name);
-    res.json({ id: info.lastInsertRowid, name });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-app.delete('/api/projects/:id', authenticateAny, (req, res) => {
-  try {
-    db.prepare("DELETE FROM projects WHERE id = ?").run(req.params.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 2. Tasks
-app.get('/api/tasks/:projectId', authenticateAny, (req, res) => {
-  const { projectId } = req.params;
-  const rows = db.prepare("SELECT * FROM tasks WHERE project_id = ? ORDER BY completed ASC, created_at DESC").all(projectId);
-  res.json(rows);
-});
-
-app.post('/api/tasks', authenticateAny, (req, res) => {
-  const { projectId, title } = req.body;
-  const info = db.prepare("INSERT INTO tasks (project_id, title) VALUES (?, ?)").run(projectId, title);
-  res.json({ id: info.lastInsertRowid, projectId, title, completed: 0 });
-});
-
-app.patch('/api/tasks/:id', authenticateAny, (req, res) => {
-  const { id } = req.params;
-  const updates = Object.keys(req.body).map(key => `${key} = @${key}`).join(', ');
-  const stmt = db.prepare(`UPDATE tasks SET ${updates} WHERE id = @id`);
-  stmt.run({ ...req.body, id });
-  res.json({ success: true });
-});
-
-app.delete('/api/tasks/:id', authenticateAny, (req, res) => {
-  db.prepare("DELETE FROM tasks WHERE id = ?").run(req.params.id);
-  res.json({ success: true });
-});
 
 // Start Server
 app.listen(port, '0.0.0.0', () => {
