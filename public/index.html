@@ -312,7 +312,24 @@
             assignedInput.value = '';
             loadTasks();
         }
+        async function addProject() {
+            const name = document.getElementById("new-project").value.trim();
+            if (!name) return;
+            await fetchSafe(API + "/projects", {
+                method: "POST",
+                body: JSON.stringify({ name })
+            });
+            document.getElementById("new-project").value = "";
+            loadProjects();
+        }
 
+        async function deleteProject(id, e) {
+            e.stopPropagation();
+            if (!confirm("Delete project and all its tasks?")) return;
+            await fetchSafe(API + "/projects/" + id, { method: "DELETE" });
+            currentProject = null;
+            loadProjects();
+        }
         async function deleteTask(id) {
             if (!confirm('Delete task?')) return;
             await fetchSafe(API + '/tasks/' + id, { method: 'DELETE' });

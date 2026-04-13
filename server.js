@@ -26,6 +26,7 @@ app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/activity', activityRoutes);
 app.use('/api/v1/agents', agentRoutes);
+app.use("/api/v1/keys", keysRoutes);
 
 // Heartbeat endpoint - mount it so /api/v1/heartbeat works
 // The agentRoutes router has a /heartbeat route, so we need to mount it at /api/v1
